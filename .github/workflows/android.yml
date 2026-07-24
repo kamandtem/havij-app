@@ -17,7 +17,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
@@ -29,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Build Web Application
-        run: npm run build
+        run: npm install
 
       - name: Initialize Capacitor Android (if not present)
         run: |
