@@ -1,0 +1,508 @@
+import React, { useState, useEffect } from 'react';
+import { Navbar } from './components/Navbar';
+import { DrawerMenu } from './components/DrawerMenu';
+import { BottomNav } from './components/BottomNav';
+import { OnboardingView } from './components/OnboardingView';
+import { PinLockView } from './components/PinLockView';
+import { SplashScreen } from './components/SplashScreen';
+
+import { DashboardView } from './components/DashboardView';
+import { DailyGoalsView } from './components/DailyGoalsView';
+import { TaskDecomposerView } from './components/TaskDecomposerView';
+import { FocusModeView } from './components/FocusModeView';
+import { FiveMinuteStartView } from './components/FiveMinuteStartView';
+import { TimelineView } from './components/TimelineView';
+import { CbtView } from './components/CbtView';
+import { DailyLogView } from './components/DailyLogView';
+import { SleepTrackerView } from './components/SleepTrackerView';
+import { GamificationGardenView } from './components/GamificationGardenView';
+import { EducationalHubView } from './components/EducationalHubView';
+import { ProfileSettingsView } from './components/ProfileSettingsView';
+
+import {
+  UserProfile,
+  DailyGoal,
+  TaskDecomposed,
+  FocusSessionLog,
+  TimelineEvent,
+  CBTEntry,
+  DailyLog,
+  SleepLog,
+  GamificationData,
+  NotificationSettings,
+  PinSettings
+} from './types';
+
+import {
+  getStoredUserProfile,
+  saveUserProfile,
+  getStoredDailyGoals,
+  saveDailyGoals,
+  getStoredTaskDecomposed,
+  saveTaskDecomposed,
+  getStoredFocusLogs,
+  saveFocusLog,
+  getStoredTimelineEvents,
+  saveTimelineEvents,
+  getStoredCBTEntries,
+  saveCBTEntry,
+  getStoredDailyLogs,
+  saveDailyLog,
+  getStoredSleepLogs,
+  saveSleepLog,
+  getStoredGamification,
+  addPointsAndCoins,
+  resetGamification,
+  getStoredNotifications,
+  saveNotifications,
+  getStoredPinSettings,
+  savePinSettings,
+  getStoredTheme,
+  saveTheme,
+  getTodayDateString,
+  getEffectiveGoalDate
+} from './utils/storage';
+
+export default function App() {
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+
+  // App States from LocalStorage
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(getStoredUserProfile());
+  const [pinSettings, setPinSettingsState] = useState<PinSettings>(getStoredPinSettings());
+  const [isPinUnlocked, setIsPinUnlocked] = useState<boolean>(!pinSettings.enabled);
+  const [theme, setThemeState] = useState<'light' | 'dark'>(getStoredTheme());
+
+  const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>(getStoredDailyGoals());
+  const [decomposedTasks, setDecomposedTasks] = useState<TaskDecomposed[]>(getStoredTaskDecomposed());
+  const [focusLogs, setFocusLogs] = useState<FocusSessionLog[]>(getStoredFocusLogs());
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>(getStoredTimelineEvents());
+  const [cbtEntries, setCbtEntries] = useState<CBTEntry[]>(getStoredCBTEntries());
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>(getStoredDailyLogs());
+  const [sleepLogs, setSleepLogs] = useState<SleepLog[]>(getStoredSleepLogs());
+  const [gamification, setGamification] = useState<GamificationData>(getStoredGamification());
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(getStoredNotifications());
+
+  // Handle dark mode DOM class
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      body.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+      body.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setThemeState(nextTheme);
+    saveTheme(nextTheme);
+  };
+
+  // Back button exit logic (back goes to dashboard tab if on another view)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeTab]);
+
+  // Goal Actions
+  const handleAddGoal = (goalData: Omit<DailyGoal, 'id' | 'completed' | 'date'>) => {
+    const newGoal: DailyGoal = {
+      id: Date.now().toString(),
+      title: goalData.title,
+      approxTimeMinutes: goalData.approxTimeMinutes,
+      importance: goalData.importance,
+      completed: false,
+      date: getEffectiveGoalDate()
+    };
+    const updated = [newGoal, ...dailyGoals];
+    setDailyGoals(updated);
+    saveDailyGoals(updated);
+  };
+
+  const handleToggleGoal = (id: string) => {
+    const updated = dailyGoals.map((g) => {
+      if (g.id === id) {
+        const nextState = !g.completed;
+        if (nextState) {
+          const updatedGam = addPointsAndCoins(15, 5);
+          setGamification(updatedGam);
+        }
+        return {
+          ...g,
+          completed: nextState,
+          completedAt: nextState ? new Date().toISOString() : undefined
+        };
+      }
+      return g;
+    });
+    setDailyGoals(updated);
+    saveDailyGoals(updated);
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    const updated = dailyGoals.filter(g => g.id !== id);
+    setDailyGoals(updated);
+    saveDailyGoals(updated);
+  };
+
+  // Task Decomposer Actions
+  const handleAddTaskDecomposed = (title: string, initialSubtasks: string[]) => {
+    const newTask: TaskDecomposed = {
+      id: Date.now().toString(),
+      title,
+      subtasks: initialSubtasks.map((sTitle, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        title: sTitle,
+        completed: false
+      })),
+      createdAt: new Date().toISOString()
+    };
+    const updated = [newTask, ...decomposedTasks];
+    setDecomposedTasks(updated);
+    saveTaskDecomposed(updated);
+    const updatedGam = addPointsAndCoins(20, 5);
+    setGamification(updatedGam);
+  };
+
+  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
+    const updated = decomposedTasks.map((t) => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          subtasks: t.subtasks.map((st) => {
+            if (st.id === subtaskId) {
+              const nextVal = !st.completed;
+              if (nextVal) {
+                const updatedGam = addPointsAndCoins(5, 2);
+                setGamification(updatedGam);
+              }
+              return { ...st, completed: nextVal };
+            }
+            return st;
+          })
+        };
+      }
+      return t;
+    });
+    setDecomposedTasks(updated);
+    saveTaskDecomposed(updated);
+  };
+
+  const handleDeleteTaskDecomposed = (taskId: string) => {
+    const updated = decomposedTasks.filter(t => t.id !== taskId);
+    setDecomposedTasks(updated);
+    saveTaskDecomposed(updated);
+  };
+
+  const handleAddSubtaskToTask = (taskId: string, title: string) => {
+    const updated = decomposedTasks.map((t) => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          subtasks: [
+            ...t.subtasks,
+            { id: Date.now().toString(), title, completed: false }
+          ]
+        };
+      }
+      return t;
+    });
+    setDecomposedTasks(updated);
+    saveTaskDecomposed(updated);
+  };
+
+  // Focus Session
+  const handleCompleteFocusSession = (durationMinutes: number, taskTitle: string, mode: 'pomodoro' | 'custom' | 'micro5') => {
+    const newLog: FocusSessionLog = {
+      id: Date.now().toString(),
+      durationMinutes,
+      taskTitle,
+      completedAt: new Date().toISOString(),
+      mode
+    };
+    saveFocusLog(newLog);
+    setFocusLogs([newLog, ...focusLogs]);
+    const updatedGam = getStoredGamification();
+    setGamification(updatedGam);
+  };
+
+  // Micro-Start 5 Min
+  const handleCompleteMicroStart = (taskTitle: string) => {
+    handleCompleteFocusSession(5, taskTitle, 'micro5');
+  };
+
+  // Timeline
+  const handleAddTimelineEvent = (title: string, timeSlot: string, category: 'work' | 'rest' | 'health' | 'routine') => {
+    const newEv: TimelineEvent = {
+      id: Date.now().toString(),
+      title,
+      timeSlot,
+      category,
+      completed: false,
+      date: getTodayDateString()
+    };
+    const updated = [...timelineEvents, newEv];
+    setTimelineEvents(updated);
+    saveTimelineEvents(updated);
+  };
+
+  const handleToggleTimelineEvent = (id: string) => {
+    const updated = timelineEvents.map((ev) => {
+      if (ev.id === id) {
+        return { ...ev, completed: !ev.completed };
+      }
+      return ev;
+    });
+    setTimelineEvents(updated);
+    saveTimelineEvents(updated);
+  };
+
+  const handleDeleteTimelineEvent = (id: string) => {
+    const updated = timelineEvents.filter(ev => ev.id !== id);
+    setTimelineEvents(updated);
+    saveTimelineEvents(updated);
+  };
+
+  // CBT
+  const handleAddCbtEntry = (entry: Omit<CBTEntry, 'id' | 'date'>) => {
+    const newEntry: CBTEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      date: getTodayDateString()
+    };
+    saveCBTEntry(newEntry);
+    setCbtEntries([newEntry, ...cbtEntries]);
+    setGamification(getStoredGamification());
+  };
+
+  const handleDeleteCbtEntry = (id: string) => {
+    const updated = cbtEntries.filter(e => e.id !== id);
+    setCbtEntries(updated);
+    localStorage.setItem('zehnaram_cbt_entries', JSON.stringify(updated));
+  };
+
+  // Daily Log
+  const handleSaveDailyLog = (logData: Omit<DailyLog, 'id'>) => {
+    const newLog: DailyLog = {
+      ...logData,
+      id: Date.now().toString()
+    };
+    saveDailyLog(newLog);
+    setDailyLogs(getStoredDailyLogs());
+    setGamification(getStoredGamification());
+  };
+
+  // Sleep Log
+  const handleSaveSleepLog = (logData: Omit<SleepLog, 'id'>) => {
+    const newLog: SleepLog = {
+      ...logData,
+      id: Date.now().toString()
+    };
+    saveSleepLog(newLog);
+    setSleepLogs(getStoredSleepLogs());
+    setGamification(getStoredGamification());
+  };
+
+  // Profile Save
+  const handleSaveProfile = (profile: UserProfile) => {
+    saveUserProfile(profile);
+    setUserProfile(profile);
+  };
+
+  const handleUpdateAvatar = (newAvatar: string) => {
+    if (userProfile) {
+      const updated = { ...userProfile, avatar: newAvatar };
+      saveUserProfile(updated);
+      setUserProfile(updated);
+    }
+  };
+
+  // Pin Settings Save
+  const handleSavePinSettings = (pSettings: PinSettings) => {
+    savePinSettings(pSettings);
+    setPinSettingsState(pSettings);
+  };
+
+  // Notifications Save
+  const handleSaveNotifications = (settings: NotificationSettings) => {
+    saveNotifications(settings);
+    setNotificationSettings(settings);
+  };
+
+  // Reset Gamification
+  const handleResetGamification = () => {
+    const freshData = resetGamification();
+    setGamification(freshData);
+  };
+
+  // Render Splash Screen on initial app launch
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
+  // Render Onboarding Screen if user not onboarded
+  if (!userProfile || !userProfile.onboarded) {
+    return (
+      <OnboardingView
+        onCompleteOnboarding={(prof) => {
+          saveUserProfile(prof);
+          setUserProfile(prof);
+        }}
+      />
+    );
+  }
+
+  // Render PIN Lock Screen if pin enabled and not unlocked yet
+  if (pinSettings.enabled && !isPinUnlocked) {
+    return (
+      <PinLockView
+        storedPin={pinSettings.pin}
+        onSuccess={() => setIsPinUnlocked(true)}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors" dir="rtl">
+      
+      {/* Top Header Navbar */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userProfile={userProfile}
+        gamification={gamification}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+      />
+
+      {/* Drawer Menu Modal (Sliding from Left) */}
+      <DrawerMenu
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userProfile={userProfile}
+        gamification={gamification}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onUpdateAvatar={handleUpdateAvatar}
+      />
+
+      {/* Main View Container */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
+        {activeTab === 'dashboard' && (
+          <DashboardView
+            userProfile={userProfile}
+            dailyGoals={dailyGoals}
+            gamification={gamification}
+            setActiveTab={setActiveTab}
+            onToggleGoal={handleToggleGoal}
+          />
+        )}
+
+        {activeTab === 'goals' && (
+          <DailyGoalsView
+            goals={dailyGoals}
+            onAddGoal={handleAddGoal}
+            onToggleGoal={handleToggleGoal}
+            onDeleteGoal={handleDeleteGoal}
+          />
+        )}
+
+        {activeTab === 'decomposer' && (
+          <TaskDecomposerView
+            tasks={decomposedTasks}
+            onAddTask={handleAddTaskDecomposed}
+            onToggleSubtask={handleToggleSubtask}
+            onDeleteTask={handleDeleteTaskDecomposed}
+            onAddSubtaskToTask={handleAddSubtaskToTask}
+          />
+        )}
+
+        {activeTab === 'focus' && (
+          <FocusModeView
+            onCompleteFocusSession={handleCompleteFocusSession}
+          />
+        )}
+
+        {activeTab === 'micro5' && (
+          <FiveMinuteStartView
+            onCompleteMicroStart={handleCompleteMicroStart}
+          />
+        )}
+
+        {activeTab === 'timeline' && (
+          <TimelineView
+            events={timelineEvents}
+            onAddEvent={handleAddTimelineEvent}
+            onToggleEvent={handleToggleTimelineEvent}
+            onDeleteEvent={handleDeleteTimelineEvent}
+          />
+        )}
+
+        {activeTab === 'cbt' && (
+          <CbtView
+            entries={cbtEntries}
+            onAddEntry={handleAddCbtEntry}
+            onDeleteEntry={handleDeleteCbtEntry}
+          />
+        )}
+
+        {activeTab === 'dailylog' && (
+          <DailyLogView
+            dailyLogs={dailyLogs}
+            onSaveDailyLog={handleSaveDailyLog}
+          />
+        )}
+
+        {activeTab === 'sleep' && (
+          <SleepTrackerView
+            sleepLogs={sleepLogs}
+            onSaveSleepLog={handleSaveSleepLog}
+          />
+        )}
+
+        {activeTab === 'garden' && (
+          <GamificationGardenView
+            gamification={gamification}
+          />
+        )}
+
+        {activeTab === 'articles' && (
+          <EducationalHubView />
+        )}
+
+        {activeTab === 'profile' && (
+          <ProfileSettingsView
+            userProfile={userProfile}
+            pinSettings={pinSettings}
+            notificationSettings={notificationSettings}
+            theme={theme}
+            onSaveProfile={handleSaveProfile}
+            onSavePinSettings={handleSavePinSettings}
+            onSaveNotifications={handleSaveNotifications}
+            onToggleTheme={handleToggleTheme}
+            onResetGamification={handleResetGamification}
+          />
+        )}
+      </main>
+
+      {/* Sticky Bottom Navigation Bar */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+    </div>
+  );
+}

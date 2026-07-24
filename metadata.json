@@ -1,0 +1,6 @@
+{
+  "name": "هویج - برنامه‌ریز و مدیریت تمرکز ADHD",
+  "description": "اپلیکیشن آفلاین هویج برای مدیریت زمان، خرد کردن کارها، افزایش تمرکز و بهداشت خواب افراد ADHD",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
