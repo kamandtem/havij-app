@@ -25,10 +25,10 @@ jobs:
           java-version: '17'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build Web Application
-        run: npm install
+        run: npm run build
 
       - name: Initialize Capacitor Android (if not present)
         run: |
