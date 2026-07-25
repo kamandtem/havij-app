@@ -31,7 +31,7 @@ jobs:
 
       - name: Initialize Capacitor Android (if not present)
         run: |
-          npx npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/local-notifications
+          npx npm install @capacitor/core@^6.1.2 @capacitor/cli@^6.1.2 @capacitor/android@^6.1.2 @capacitor/app@^6.1.2 @capacitor/local-notifications@^6.1.2
           if [ ! -d "android" ]; then
             npx cap init "ذهن‌آرام" "com.zehnaram.adhd" --web-dir dist
             npx cap add android
