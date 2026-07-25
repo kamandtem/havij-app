@@ -100,6 +100,8 @@ export interface NotificationSettings {
   sleepReminderEnabled: boolean;
   goalsReminderTime?: string;
   goalsReminderEnabled?: boolean;
+  wakeReminderTime?: string;
+  wakeReminderEnabled?: boolean;
 }
 
 export interface Article {

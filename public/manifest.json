@@ -3,6 +3,12 @@
   "name": "ذهن‌آرام - اپلیکیشن مدیریت ADHD و تمرکز",
   "icons": [
     {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "512x512",

@@ -42,6 +42,10 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [goalsReminderEnabled, setGoalsReminderEnabled] = useState(notificationSettings.goalsReminderEnabled ?? true);
   const [goalsReminderTime, setGoalsReminderTime] = useState(notificationSettings.goalsReminderTime || '09:00');
 
+  // Wake-up reminder state (sleep tracker)
+  const [wakeReminderEnabled, setWakeReminderEnabled] = useState(notificationSettings.wakeReminderEnabled ?? false);
+  const [wakeReminderTime, setWakeReminderTime] = useState(notificationSettings.wakeReminderTime || '07:30');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableChallenges = [
@@ -120,7 +124,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       sleepReminderEnabled,
       sleepReminderTime,
       goalsReminderEnabled,
-      goalsReminderTime
+      goalsReminderTime,
+      wakeReminderEnabled,
+      wakeReminderTime
     });
     showToast('تنظیمات یادآوری با موفقیت ذخیره شد.');
   };
@@ -382,6 +388,43 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                       value={sleepReminderTime}
                       onChange={(e) => setSleepReminderTime(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Wake-up Reminder */}
+              <div className="p-4 bg-sky-50/50 dark:bg-slate-800/60 rounded-2xl border border-sky-100 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-4 h-4 text-sky-500" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      یادآوری زمان بیداری
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWakeReminderEnabled(!wakeReminderEnabled)}
+                    className={`w-11 h-6 rounded-full p-1 transition-colors ${
+                      wakeReminderEnabled ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      wakeReminderEnabled ? 'translate-x-0' : '-translate-x-5'
+                    }`} />
+                  </button>
+                </div>
+
+                {wakeReminderEnabled && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      ساعت هدف بیدار شدن
+                    </label>
+                    <input
+                      type="time"
+                      value={wakeReminderTime}
+                      onChange={(e) => setWakeReminderTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-sky-500"
                     />
                   </div>
                 )}

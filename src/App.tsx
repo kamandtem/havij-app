@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { syncScheduledNotifications } from './utils/notifications';
 import { Navbar } from './components/Navbar';
 import { DrawerMenu } from './components/DrawerMenu';
 import { BottomNav } from './components/BottomNav';
@@ -103,19 +105,73 @@ export default function App() {
     saveTheme(nextTheme);
   };
 
-  // Back button exit logic (back goes to dashboard tab if on another view)
-  useEffect(() => {
-    const handlePopState = () => {
-      if (activeTab !== 'dashboard') {
-        setActiveTab('dashboard');
-        window.history.pushState(null, '', window.location.href);
-      }
-    };
+  // Navigation history stack, so the back button returns to whatever
+  // screen the user was actually on before, not always the dashboard.
+  const historyStackRef = useRef<string[]>([]);
+  const lastBackPressRef = useRef<number>(0);
+  const [showExitToast, setShowExitToast] = useState(false);
 
-    window.history.pushState(null, '', window.location.href);
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeTab]);
+  const navigateTo = (tab: string) => {
+    setActiveTab((current) => {
+      if (tab !== current) {
+        historyStackRef.current.push(current);
+      }
+      return tab;
+    });
+  };
+
+  // Hardware Back Button (Android):
+  // 1) close drawer if open
+  // 2) go back one screen in history if there is one
+  // 3) if already at the root screen, require a second press within 2s to exit
+  useEffect(() => {
+    const listenerPromise = CapacitorApp.addListener('backButton', () => {
+      if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+        return;
+      }
+
+      if (historyStackRef.current.length > 0) {
+        const previousTab = historyStackRef.current.pop() as string;
+        setActiveTab(previousTab);
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        CapacitorApp.exitApp();
+      } else {
+        lastBackPressRef.current = now;
+        setShowExitToast(true);
+        setTimeout(() => setShowExitToast(false), 2000);
+      }
+    });
+
+    return () => {
+      listenerPromise.then((listener) => listener.remove());
+    };
+  }, [isDrawerOpen]);
+
+  // Re-lock the PIN screen whenever the app returns from the background,
+  // so the PIN lock actually protects the app instead of only applying
+  // once at cold start.
+  useEffect(() => {
+    const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && pinSettings.enabled) {
+        setIsPinUnlocked(false);
+      }
+    });
+
+    return () => {
+      listenerPromise.then((listener) => listener.remove());
+    };
+  }, [pinSettings.enabled]);
+
+  // Request notification permission and (re)schedule daily reminders
+  // whenever the saved notification settings change.
+  useEffect(() => {
+    syncScheduledNotifications(notificationSettings);
+  }, [notificationSettings]);
 
   // Goal Actions
   const handleAddGoal = (goalData: Omit<DailyGoal, 'id' | 'completed' | 'date'>) => {
@@ -334,6 +390,13 @@ export default function App() {
   const handleSavePinSettings = (pSettings: PinSettings) => {
     savePinSettings(pSettings);
     setPinSettingsState(pSettings);
+    // If the user just turned PIN lock on, lock the app immediately so the
+    // setting visibly takes effect instead of waiting for a full restart.
+    if (pSettings.enabled) {
+      setIsPinUnlocked(false);
+    } else {
+      setIsPinUnlocked(true);
+    }
   };
 
   // Notifications Save
@@ -377,11 +440,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors" dir="rtl">
-      
+
+      {/* Exit confirmation toast (press back again to exit) */}
+      {showExitToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-bold">
+          برای خروج از برنامه، دوباره دکمه برگشت را بزنید
+        </div>
+      )}
+
       {/* Top Header Navbar */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTo}
         userProfile={userProfile}
         gamification={gamification}
         onOpenDrawer={() => setIsDrawerOpen(true)}
@@ -394,7 +464,7 @@ export default function App() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTo}
         userProfile={userProfile}
         gamification={gamification}
         theme={theme}
@@ -409,7 +479,7 @@ export default function App() {
             userProfile={userProfile}
             dailyGoals={dailyGoals}
             gamification={gamification}
-            setActiveTab={setActiveTab}
+            setActiveTab={navigateTo}
             onToggleGoal={handleToggleGoal}
           />
         )}
@@ -502,7 +572,7 @@ export default function App() {
       </main>
 
       {/* Sticky Bottom Navigation Bar */}
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={navigateTo} />
     </div>
   );
 }

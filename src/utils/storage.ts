@@ -27,9 +27,21 @@ const STORAGE_KEYS = {
   THEME: 'havij_theme'
 };
 
+// Formats a Date using LOCAL (device) date components, not UTC.
+// Using toISOString() here was the root cause of the "yesterday's tasks
+// still showing tomorrow" bug: toISOString() converts to UTC, which for
+// timezones ahead of UTC (like Iran, UTC+3:30) shifts the calendar day
+// at UTC midnight instead of local midnight, causing inconsistent date
+// strings depending on the time of day.
+function formatLocalDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function getTodayDateString(): string {
-  const d = new Date();
-  return d.toISOString().split('T')[0];
+  return formatLocalDate(new Date());
 }
 
 // Effective Goal Date: Resets at 02:00 AM (02:00 Midnight/Early morning)
@@ -39,7 +51,7 @@ export function getEffectiveGoalDate(): string {
   if (d.getHours() < 2) {
     d.setDate(d.getDate() - 1);
   }
-  return d.toISOString().split('T')[0];
+  return formatLocalDate(d);
 }
 
 // User Profile
@@ -254,7 +266,9 @@ export function getStoredNotifications(): NotificationSettings {
       sleepReminderTime: '22:30',
       sleepReminderEnabled: true,
       goalsReminderTime: '09:00',
-      goalsReminderEnabled: true
+      goalsReminderEnabled: true,
+      wakeReminderTime: '07:30',
+      wakeReminderEnabled: false
     };
   }
   try {
@@ -266,7 +280,9 @@ export function getStoredNotifications(): NotificationSettings {
       sleepReminderTime: parsed.sleepReminderTime || '22:30',
       sleepReminderEnabled: parsed.sleepReminderEnabled ?? true,
       goalsReminderTime: parsed.goalsReminderTime || '09:00',
-      goalsReminderEnabled: parsed.goalsReminderEnabled ?? true
+      goalsReminderEnabled: parsed.goalsReminderEnabled ?? true,
+      wakeReminderTime: parsed.wakeReminderTime || '07:30',
+      wakeReminderEnabled: parsed.wakeReminderEnabled ?? false
     };
   } catch {
     return {
@@ -276,7 +292,9 @@ export function getStoredNotifications(): NotificationSettings {
       sleepReminderTime: '22:30',
       sleepReminderEnabled: true,
       goalsReminderTime: '09:00',
-      goalsReminderEnabled: true
+      goalsReminderEnabled: true,
+      wakeReminderTime: '07:30',
+      wakeReminderEnabled: false
     };
   }
 }

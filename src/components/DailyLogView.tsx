@@ -33,8 +33,9 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
     setTimeout(() => setSavedMsg(false), 3000);
   };
 
-  // SVG Chart Calculation for 7 days
-  const recentLogs = [...dailyLogs].slice(0, 7).reverse();
+  // Trend chart: shows the change across all logged days, updating live
+  // after every single entry (not gated behind a minimum count).
+  const recentLogs = [...dailyLogs].slice(0, 30).reverse();
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">

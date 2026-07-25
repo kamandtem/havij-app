@@ -54,6 +54,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       <p className="text-[11px] font-semibold text-white/80 mt-4">
         در حال آماده‌سازی محیط تمرکز...
       </p>
+
+      {/* Developer Credit */}
+      <p className="text-[11px] font-semibold text-white/70 absolute bottom-6">
+        برنامه نویس: محمدرضا ارجمند
+      </p>
     </div>
   );
 };
