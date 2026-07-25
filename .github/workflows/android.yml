@@ -39,7 +39,7 @@ jobs:
           npx cap sync android
 
       - name: Generate App Icon
-        run: npx @capacitor/assets generate --android --iconOnly
+        run: npx @capacitor/assets generate --android
 
       - name: Fix Kotlin stdlib duplicate classes
         run: |
