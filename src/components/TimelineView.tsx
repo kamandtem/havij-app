@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calendar, Plus, CheckCircle2, Trash2, Clock } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Calendar, Plus, CheckCircle2, Trash2, Clock, ChevronDown } from 'lucide-react';
 import { TimelineEvent } from '../types';
 
 interface TimelineViewProps {
@@ -9,6 +9,13 @@ interface TimelineViewProps {
   onDeleteEvent: (id: string) => void;
 }
 
+const CATEGORY_OPTIONS: { value: 'work' | 'rest' | 'health' | 'routine'; label: string }[] = [
+  { value: 'work', label: 'کاری / تحصیلی' },
+  { value: 'rest', label: 'استراحت' },
+  { value: 'health', label: 'سلامت / ورزش' },
+  { value: 'routine', label: 'روتین شخصی' }
+];
+
 export const TimelineView: React.FC<TimelineViewProps> = ({
   events,
   onAddEvent,
@@ -16,15 +23,30 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onDeleteEvent
 }) => {
   const [title, setTitle] = useState('');
-  const [timeSlot, setTimeSlot] = useState('09:00 - 10:00');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
   const [category, setCategory] = useState<'work' | 'rest' | 'health' | 'routine'>('work');
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
+        setIsCategoryOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onAddEvent(title.trim(), timeSlot, category);
+    onAddEvent(title.trim(), `${startTime} - ${endTime}`, category);
     setTitle('');
   };
+
+  const selectedCategoryLabel = CATEGORY_OPTIONS.find((c) => c.value === category)?.label ?? '';
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -46,47 +68,82 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       {/* Add Time Block Form */}
       <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs">
-        <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <h3 className="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
           <Plus className="w-5 h-5 text-orange-500" />
-          <span>افزودن بلوک زمانی جدید</span>
+          <span>یک برنامه‌ی جدید به تایم‌لاین امروز اضافه کن</span>
         </h3>
+        <p className="text-xs text-slate-400 mb-4">
+          مثلاً «مطالعه‌ی درس ریاضی» از ساعت ۹ تا ۱۰ صبح. این بلوک بعداً پایین همین صفحه نشان داده می‌شود.
+        </p>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          <div className="md:col-span-5">
-            <label className="block text-xs font-bold text-slate-700 mb-1">عنوان فعالیت</label>
+          <div className="md:col-span-4">
+            <label className="block text-xs font-bold text-slate-700 mb-1">این بلوک زمانی برای چه کاری است؟</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="مثلاً: مطالعه، پیاده‌روی، جلسه..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:border-orange-500"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-orange-500"
               required
             />
           </div>
 
-          <div className="md:col-span-3">
-            <label className="block text-xs font-bold text-slate-700 mb-1">بازه زمانی</label>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1">از ساعت</label>
             <input
-              type="text"
-              value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
-              placeholder="مثلاً: 10:00 - 11:30"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:border-orange-500"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-orange-500"
             />
           </div>
 
           <div className="md:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1">تا ساعت</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          {/* Custom rounded dropdown replacing the native <select>, whose
+              option list can't be styled with rounded corners consistently
+              across devices, and whose selected-value color was unclear. */}
+          <div className="md:col-span-2 relative" ref={categoryRef}>
             <label className="block text-xs font-bold text-slate-700 mb-1">دسته‌بندی</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as 'work' | 'rest' | 'health' | 'routine')}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:border-orange-500 bg-white"
+            <button
+              type="button"
+              onClick={() => setIsCategoryOpen((prev) => !prev)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white flex items-center justify-between focus:outline-none focus:border-orange-500"
             >
-              <option value="work">کاری/تحصیلی</option>
-              <option value="rest">استراحت</option>
-              <option value="health">سلامت/ورزش</option>
-              <option value="routine">روتین شخصی</option>
-            </select>
+              <span>{selectedCategoryLabel}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isCategoryOpen && (
+              <div className="absolute z-20 top-full mt-1.5 w-full bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setCategory(opt.value);
+                      setIsCategoryOpen(false);
+                    }}
+                    className={`w-full text-right px-4 py-2.5 text-xs font-bold transition-colors ${
+                      category === opt.value
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-white text-slate-700 hover:bg-orange-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2">

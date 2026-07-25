@@ -23,6 +23,10 @@ interface DashboardViewProps {
   gamification: GamificationData;
   setActiveTab: (tab: string) => void;
   onToggleGoal: (id: string) => void;
+  focusSelectedMinutes: number;
+  focusTimeLeftSeconds: number;
+  focusIsRunning: boolean;
+  onToggleFocusTimer: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -30,9 +34,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   dailyGoals,
   gamification,
   setActiveTab,
-  onToggleGoal
+  onToggleGoal,
+  focusSelectedMinutes,
+  focusTimeLeftSeconds,
+  focusIsRunning,
+  onToggleFocusTimer
 }) => {
   const completedGoalsCount = dailyGoals.filter(g => g.completed).length;
+  const visibleGoals = dailyGoals.filter(g => !g.completed);
+
+  const focusMinutesDisplay = String(Math.floor(focusTimeLeftSeconds / 60)).padStart(2, '0');
+  const focusSecondsDisplay = String(focusTimeLeftSeconds % 60).padStart(2, '0');
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -63,25 +75,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Grid Layout matching Clean Minimalism theme */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Focus Timer Widget */}
+        {/* Focus Timer Widget — live and synced with the Focus panel */}
         <div className="lg:col-span-5 bg-white/90 backdrop-blur-md rounded-[28px] border border-slate-200/80 p-6 flex flex-col items-center justify-center text-center shadow-xs relative">
           <div className="absolute top-5 right-5 text-xs font-extrabold text-slate-400 tracking-wider">
             تایمر پومودورو
           </div>
 
           <div className="my-6 relative w-48 h-48 rounded-full border-4 border-slate-100 flex flex-col items-center justify-center bg-slate-50/50">
-            <div className="absolute inset-0 rounded-full border-t-4 border-orange-500 animate-pulse-ring"></div>
-            <span className="text-5xl font-light text-slate-800 tracking-tight font-mono">۲۵:۰۰</span>
-            <span className="text-xs font-bold text-slate-400 mt-2">۲۵ دقیقه تمرکز خالص</span>
+            <div className={`absolute inset-0 rounded-full border-t-4 border-orange-500 ${focusIsRunning ? 'animate-pulse-ring' : ''}`}></div>
+            <span className="text-5xl font-light text-slate-800 tracking-tight font-mono">
+              {focusMinutesDisplay}:{focusSecondsDisplay}
+            </span>
+            <span className="text-xs font-bold text-slate-400 mt-2">
+              {focusIsRunning ? 'در حال تمرکز...' : `${focusSelectedMinutes} دقیقه تمرکز خالص`}
+            </span>
           </div>
 
-          <button
-            onClick={() => setActiveTab('focus')}
-            className="w-full max-w-xs py-3.5 px-6 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold shadow-md shadow-slate-200 transition-all flex items-center justify-center gap-2"
-          >
-            <Play className="w-4 h-4 fill-current" />
-            <span>ورود به حالت تمرکز</span>
-          </button>
+          <div className="w-full max-w-xs flex gap-2.5">
+            <button
+              onClick={onToggleFocusTimer}
+              className={`flex-1 py-3.5 px-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+                focusIsRunning
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                  : 'bg-slate-800 hover:bg-slate-700 text-white shadow-slate-200'
+              }`}
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>{focusIsRunning ? 'توقف موقت' : 'شروع سریع'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('focus')}
+              className="flex-1 py-3.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 rounded-2xl font-bold transition-all"
+            >
+              ورود به حالت تمرکز
+            </button>
+          </div>
         </div>
 
         {/* Top 3 Golden Daily Goals Summary */}
@@ -109,8 +137,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
 
-            {/* Empty State vs List */}
-            {dailyGoals.length === 0 ? (
+            {/* Empty State vs All-Done State vs List (completed goals are hidden once ticked) */}
+            {visibleGoals.length === 0 && dailyGoals.length > 0 ? (
+              <div className="h-20 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 flex items-center justify-center text-emerald-700 text-xs font-bold">
+                🎉 هر ۳ هدف امروزت را کامل کردی! آفرین
+              </div>
+            ) : visibleGoals.length === 0 ? (
               <div className="space-y-3">
                 <div
                   onClick={() => setActiveTab('goals')}
@@ -128,7 +160,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {dailyGoals.map((goal) => (
+                {visibleGoals.map((goal) => (
                   <div
                     key={goal.id}
                     className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${

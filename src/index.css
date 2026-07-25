@@ -14,6 +14,33 @@
   body {
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   }
+
+  /* The app manages its own light/dark theme via the .dark class, not the
+     OS setting. Without an explicit color-scheme, Android WebView's
+     automatic "force dark" can re-color native form controls (inputs,
+     selects) unpredictably, sometimes making typed text nearly invisible.
+     Declaring color-scheme here — and forcing explicit colors on form
+     controls below — makes sure text and backgrounds always stay legible
+     regardless of the device's OS theme. */
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  input, select, textarea {
+    color: #1e293b; /* slate-800 */
+    background-color: #ffffff;
+  }
+  .dark input, .dark select, .dark textarea {
+    color: #f1f5f9; /* slate-100 */
+    background-color: #1e293b; /* slate-800 */
+  }
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8; /* slate-400, clearly legible but distinguishable from real text */
+    opacity: 1;
+  }
 }
 
 /* Custom scrollbar styling for RTL cards */

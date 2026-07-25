@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Lock, Delete, Sparkles, KeyRound } from 'lucide-react';
 
 interface PinLockViewProps {
@@ -10,17 +10,8 @@ export const PinLockView: React.FC<PinLockViewProps> = ({
   storedPin,
   onSuccess
 }) => {
-  const [showSplash, setShowSplash] = useState(true);
   const [inputPin, setInputPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    // Show splash screen for 1.8s then switch to PIN keypad
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 1800);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleKeyPress = (num: string) => {
     if (inputPin.length < 4) {
@@ -43,26 +34,6 @@ export const PinLockView: React.FC<PinLockViewProps> = ({
     setInputPin(inputPin.slice(0, -1));
     setErrorMsg('');
   };
-
-  if (showSplash) {
-    return (
-      <div className="fixed inset-0 z-50 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 flex flex-col items-center justify-center p-6 text-white text-center font-sans">
-        <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center text-5xl shadow-2xl mb-6 animate-bounce">
-          🥕
-        </div>
-        <h1 className="text-4xl font-black tracking-tight mb-2">
-          هویج
-        </h1>
-        <p className="text-sm font-bold text-orange-100 max-w-xs">
-          برنامه‌ریز و دستیار تمرکز ADHD
-        </p>
-        <div className="mt-8 flex items-center gap-2 text-xs font-semibold text-white/80">
-          <div className="w-2 h-2 rounded-full bg-white animate-ping" />
-          <span>در حال بارگذاری محیط امن...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col items-center justify-center p-6 font-sans text-center" dir="rtl">

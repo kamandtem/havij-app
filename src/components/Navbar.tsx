@@ -1,31 +1,38 @@
 import React from 'react';
-import { Menu, Sparkles, User, Sun, Moon } from 'lucide-react';
-import { UserProfile, GamificationData } from '../types';
+import { Menu } from 'lucide-react';
+import { DailyGoal, DailyLog, SleepLog } from '../types';
+import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  userProfile: UserProfile | null;
-  gamification: GamificationData;
   onOpenDrawer: () => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
+  dailyGoals: DailyGoal[];
+  dailyLogs: DailyLog[];
+  sleepLogs: SleepLog[];
+  focusIsRunning: boolean;
+  focusTimeLeftSeconds: number;
+  focusTaskTitle: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  userProfile,
-  gamification,
   onOpenDrawer,
-  theme,
-  onToggleTheme
+  dailyGoals,
+  dailyLogs,
+  sleepLogs,
+  focusIsRunning,
+  focusTimeLeftSeconds,
+  focusTaskTitle
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-xs transition-colors font-sans">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        
-        {/* Left Side: Hamburger Drawer Menu Toggle Button */}
+    // Soft gradient zone behind the floating header — it doesn't touch the
+    // top of the screen and fades into the page background below it.
+    <header className="sticky top-0 z-40 pt-3 pb-4 px-3 bg-gradient-to-b from-orange-100/70 via-orange-50/40 to-transparent dark:from-orange-950/30 dark:via-slate-900/30 dark:to-transparent transition-colors font-sans">
+      <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-[24px] border border-slate-100/80 dark:border-slate-800 shadow-lg shadow-slate-200/70 dark:shadow-black/30 px-3 py-2.5 transition-colors">
+
+        {/* Right Side (RTL start): Hamburger + Branding */}
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenDrawer}
@@ -35,7 +42,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Menu className="w-5 h-5 stroke-[2.5]" />
           </button>
 
-          {/* App Branding */}
           <div
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer select-none"
@@ -54,41 +60,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Theme Switch & Profile */}
+        {/* Left Side (RTL end): Reminders Bell */}
         <div className="flex items-center gap-2">
-          {/* Quick Theme Toggle */}
-          <button
-            onClick={onToggleTheme}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors"
-            title="تغییر حالت شب و روز"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-600" />
-            )}
-          </button>
-
-          {/* User Profile Avatar button */}
-          <button
-            onClick={() => setActiveTab('profile')}
-            className="flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all"
-          >
-            <div className="w-8 h-8 rounded-xl bg-orange-500 text-white font-bold text-sm flex items-center justify-center overflow-hidden">
-              {userProfile?.avatar ? (
-                userProfile.avatar.startsWith('data:') ? (
-                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span>{userProfile.avatar}</span>
-                )
-              ) : (
-                <span>🥕</span>
-              )}
-            </div>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden sm:inline">
-              {userProfile?.name || 'کاربر'}
-            </span>
-          </button>
+          {/* Reminders (replaces the old profile shortcut — profile now lives in the menu.
+              Theme toggle also moved out — it now lives in Profile & Settings.) */}
+          <NotificationBell
+            dailyGoals={dailyGoals}
+            dailyLogs={dailyLogs}
+            sleepLogs={sleepLogs}
+            focusIsRunning={focusIsRunning}
+            focusTimeLeftSeconds={focusTimeLeftSeconds}
+            focusTaskTitle={focusTaskTitle}
+            setActiveTab={setActiveTab}
+          />
         </div>
 
       </div>

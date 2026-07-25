@@ -72,7 +72,7 @@ export const GamificationGardenView: React.FC<GamificationGardenViewProps> = ({
 
           <div>
             <h3 className="text-xl font-bold text-slate-800">
-              درخت ذهن‌آرام شما
+              درخت هویج شما
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-xs">
               با تکمیل اهداف، تمرکز، و خرد کردن کارها، درخت شما از جوانه کوچک به درخت طلایی تبدیل می‌شود.

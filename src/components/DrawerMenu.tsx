@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Target,
@@ -12,11 +12,7 @@ import {
   Sprout,
   BookOpen,
   Settings,
-  X,
-  Sun,
-  Camera,
-  CheckCircle,
-  Sparkles
+  Camera
 } from 'lucide-react';
 import { UserProfile, GamificationData } from '../types';
 
@@ -39,16 +35,23 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   setActiveTab,
   userProfile,
   gamification,
-  theme,
-  onToggleTheme,
   onUpdateAvatar
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef(false);
+
+  // Swipe-to-close state: dragging the drawer toward its resting/closed
+  // side visually slides it away, mimicking a real "close" gesture.
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   if (!isOpen) return null;
 
   const mainItems = [
     { id: 'dashboard', label: 'داشبورد اصلی', icon: LayoutDashboard },
+    { id: 'articles', label: 'آموزش ADHD', icon: BookOpen },
     { id: 'goals', label: '۳ هدف امروز', icon: Target },
     { id: 'decomposer', label: 'خردکننده کارها', icon: Scissors },
     { id: 'focus', label: 'تمرکز و تایمر', icon: Timer },
@@ -64,7 +67,6 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
   const learningItems = [
     { id: 'garden', label: 'باغچه انگیزه', icon: Sprout },
-    { id: 'articles', label: 'آموزش ADHD', icon: BookOpen },
   ];
 
   const handleItemClick = (id: string) => {
@@ -83,40 +85,75 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    draggingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartRef.current.x;
+    const dy = t.clientY - touchStartRef.current.y;
+
+    if (!draggingRef.current) {
+      // Only start a drag once the gesture is clearly horizontal, so normal
+      // taps on menu items are never intercepted.
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+        draggingRef.current = true;
+        setIsDragging(true);
+      } else {
+        return;
+      }
+    }
+
+    if (dx > 0) {
+      setDragX(dx);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggingRef.current) {
+      const width = drawerRef.current?.offsetWidth || 320;
+      if (dragX > width * 0.28) {
+        onClose();
+      }
+    }
+    setIsDragging(false);
+    setDragX(0);
+    touchStartRef.current = null;
+    draggingRef.current = false;
+  };
+
+  const drawerWidth = drawerRef.current?.offsetWidth || 320;
+  const backdropOpacity = Math.max(0, 1 - dragX / drawerWidth);
+
   return (
     <div className="fixed inset-0 z-50 flex" dir="rtl">
       {/* Backdrop overlay */}
       <div
         onClick={onClose}
+        style={{ opacity: backdropOpacity }}
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
       />
 
-      {/* Drawer Container (Sliding out from Left side) */}
-      <div className="relative left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/80 dark:border-slate-800 shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-left duration-300 overflow-y-auto font-sans">
-        
-        {/* Drawer Header with Close button & Theme Toggle */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onToggleTheme}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 transition-colors text-xs font-bold flex items-center gap-1.5"
-              title="تغییر تم شب/روز"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-              <span>{theme === 'dark' ? 'روز' : 'شب'}</span>
-            </button>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* User Profile Card (Reference Image Style) */}
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center gap-3">
+      {/* Drawer Container: docked to its resting edge, with a small gap
+          from the top and bottom of the screen, and generously rounded
+          corners. Swiping it toward its resting side closes it. */}
+      <div
+        ref={drawerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateX(${dragX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease'
+        }}
+        className="relative w-80 max-w-[85vw] my-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-[28px] shadow-2xl flex flex-col z-10 animate-in fade-in duration-200 overflow-hidden font-sans"
+      >
+        {/* User Profile Row with Settings Gear (icon only) */}
+        <div className="p-4 flex items-center gap-3">
           <div className="relative group shrink-0">
             <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-950/60 border-2 border-orange-300 dark:border-orange-500 shadow-sm flex items-center justify-center text-2xl overflow-hidden font-bold text-orange-600">
               {userProfile?.avatar ? (
@@ -162,10 +199,23 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Settings & Profile — icon only, opens the profile/settings view */}
+          <button
+            onClick={() => handleItemClick('profile')}
+            className={`shrink-0 p-2.5 rounded-2xl transition-colors ${
+              activeTab === 'profile'
+                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700'
+            }`}
+            title="تنظیمات و پروفایل"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation Sections */}
-        <div className="flex-1 p-4 space-y-5">
+        <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
           {/* Main Category */}
           <div className="space-y-1">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1 block">
@@ -178,7 +228,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -203,7 +253,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -228,7 +278,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -240,21 +290,6 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               );
             })}
           </div>
-        </div>
-
-        {/* Footer: Settings Item */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
-          <button
-            onClick={() => handleItemClick('profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs transition-all text-right ${
-              activeTab === 'profile'
-                ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <Settings className="w-4 h-4 text-orange-500" />
-            <span>تنظیمات و پروفایل کاربر</span>
-          </button>
         </div>
       </div>
     </div>

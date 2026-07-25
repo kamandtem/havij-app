@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import { syncScheduledNotifications } from './utils/notifications';
+import { playCompletionChime } from './utils/audio';
 import { Navbar } from './components/Navbar';
+import { MotivationalBanner } from './components/MotivationalBanner';
 import { DrawerMenu } from './components/DrawerMenu';
 import { BottomNav } from './components/BottomNav';
 import { OnboardingView } from './components/OnboardingView';
@@ -108,8 +112,7 @@ export default function App() {
   // Navigation history stack, so the back button returns to whatever
   // screen the user was actually on before, not always the dashboard.
   const historyStackRef = useRef<string[]>([]);
-  const lastBackPressRef = useRef<number>(0);
-  const [showExitToast, setShowExitToast] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const navigateTo = (tab: string) => {
     setActiveTab((current) => {
@@ -122,10 +125,16 @@ export default function App() {
 
   // Hardware Back Button (Android):
   // 1) close drawer if open
-  // 2) go back one screen in history if there is one
-  // 3) if already at the root screen, require a second press within 2s to exit
+  // 2) go back one screen in history if there is one (single press = previous panel)
+  // 3) if already at the root screen with nowhere left to go, ask for confirmation
+  //    (Yes/No) before exiting, instead of a silent double-press timer.
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('backButton', () => {
+      if (showExitConfirm) {
+        // Dialog already open; ignore extra back presses.
+        return;
+      }
+
       if (isDrawerOpen) {
         setIsDrawerOpen(false);
         return;
@@ -137,20 +146,13 @@ export default function App() {
         return;
       }
 
-      const now = Date.now();
-      if (now - lastBackPressRef.current < 2000) {
-        CapacitorApp.exitApp();
-      } else {
-        lastBackPressRef.current = now;
-        setShowExitToast(true);
-        setTimeout(() => setShowExitToast(false), 2000);
-      }
+      setShowExitConfirm(true);
     });
 
     return () => {
       listenerPromise.then((listener) => listener.remove());
     };
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, showExitConfirm]);
 
   // Re-lock the PIN screen whenever the app returns from the background,
   // so the PIN lock actually protects the app instead of only applying
@@ -172,6 +174,113 @@ export default function App() {
   useEffect(() => {
     syncScheduledNotifications(notificationSettings);
   }, [notificationSettings]);
+
+  // Focus / Pomodoro timer state lives here (not inside FocusModeView) so the
+  // countdown keeps running when the user switches to another tab or the
+  // Dashboard's Pomodoro widget, instead of resetting every time the view unmounts.
+  const FOCUS_NOTIF_ID = 9001;
+  const [focusSelectedMinutes, setFocusSelectedMinutes] = useState<number>(25);
+  const [focusTimeLeftSeconds, setFocusTimeLeftSeconds] = useState<number>(25 * 60);
+  const [focusIsRunning, setFocusIsRunning] = useState<boolean>(false);
+  const [focusTaskTitle, setFocusTaskTitle] = useState<string>('');
+  const focusTimerIntervalRef = useRef<number | null>(null);
+  const focusMinutesRef = useRef(focusSelectedMinutes);
+  const focusTaskRef = useRef(focusTaskTitle);
+
+  useEffect(() => { focusMinutesRef.current = focusSelectedMinutes; }, [focusSelectedMinutes]);
+  useEffect(() => { focusTaskRef.current = focusTaskTitle; }, [focusTaskTitle]);
+
+  const cancelFocusNotification = async () => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: FOCUS_NOTIF_ID }] });
+    } catch {
+      // ignore
+    }
+  };
+
+  const scheduleFocusNotification = async (secondsLeft: number) => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: FOCUS_NOTIF_ID }] });
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: FOCUS_NOTIF_ID,
+          title: 'هویج 🥕',
+          body: 'جلسه تمرکزت تموم شد! وقت یک استراحت کوتاهه.',
+          schedule: { at: new Date(Date.now() + secondsLeft * 1000) }
+        }]
+      });
+    } catch {
+      // ignore scheduling errors on unsupported devices
+    }
+  };
+
+  // The interval itself only depends on isRunning, so switching tabs (which
+  // unmounts FocusModeView / re-renders the Dashboard) never recreates or
+  // resets it — the countdown keeps ticking wherever the user is in the app.
+  useEffect(() => {
+    if (!focusIsRunning) {
+      if (focusTimerIntervalRef.current) clearInterval(focusTimerIntervalRef.current);
+      return;
+    }
+    focusTimerIntervalRef.current = window.setInterval(() => {
+      setFocusTimeLeftSeconds((prev) => {
+        if (prev <= 1) {
+          if (focusTimerIntervalRef.current) clearInterval(focusTimerIntervalRef.current);
+          setFocusIsRunning(false);
+          playCompletionChime();
+          handleCompleteFocusSession(
+            focusMinutesRef.current,
+            focusTaskRef.current || 'جلسه تمرکز',
+            focusMinutesRef.current === 25 ? 'pomodoro' : 'custom'
+          );
+          cancelFocusNotification();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (focusTimerIntervalRef.current) clearInterval(focusTimerIntervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusIsRunning]);
+
+  const handleSelectFocusMinutes = (mins: number) => {
+    setFocusSelectedMinutes(mins);
+    setFocusTimeLeftSeconds(mins * 60);
+    setFocusIsRunning(false);
+    cancelFocusNotification();
+  };
+
+  const handleToggleFocusTimer = () => {
+    setFocusIsRunning((prev) => {
+      const next = !prev;
+      if (next) {
+        scheduleFocusNotification(focusTimeLeftSeconds);
+      } else {
+        cancelFocusNotification();
+      }
+      return next;
+    });
+  };
+
+  const handleResetFocusTimer = () => {
+    setFocusIsRunning(false);
+    setFocusTimeLeftSeconds(focusSelectedMinutes * 60);
+    cancelFocusNotification();
+  };
+
+  const handleQuickCompleteFocus = () => {
+    playCompletionChime();
+    handleCompleteFocusSession(
+      focusSelectedMinutes,
+      focusTaskTitle || 'جلسه تمرکز',
+      focusSelectedMinutes === 25 ? 'pomodoro' : 'custom'
+    );
+    handleResetFocusTimer();
+  };
 
   // Goal Actions
   const handleAddGoal = (goalData: Omit<DailyGoal, 'id' | 'completed' | 'date'>) => {
@@ -441,10 +550,28 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors" dir="rtl">
 
-      {/* Exit confirmation toast (press back again to exit) */}
-      {showExitToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-bold">
-          برای خروج از برنامه، دوباره دکمه برگشت را بزنید
+      {/* Exit confirmation dialog (shown when back is pressed with no previous panel) */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-[28px] max-w-xs w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 text-center space-y-5">
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              آیا از برنامه خارج می‌شوید؟
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all"
+              >
+                خیر
+              </button>
+              <button
+                onClick={() => CapacitorApp.exitApp()}
+                className="flex-1 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm shadow-md shadow-rose-500/20 transition-all"
+              >
+                بله
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -452,12 +579,19 @@ export default function App() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={navigateTo}
-        userProfile={userProfile}
-        gamification={gamification}
         onOpenDrawer={() => setIsDrawerOpen(true)}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
+        dailyGoals={dailyGoals}
+        dailyLogs={dailyLogs}
+        sleepLogs={sleepLogs}
+        focusIsRunning={focusIsRunning}
+        focusTimeLeftSeconds={focusTimeLeftSeconds}
+        focusTaskTitle={focusTaskTitle}
       />
+
+      {/* Daily motivational message, right under the header */}
+      <div className="-mt-2 mb-2">
+        <MotivationalBanner />
+      </div>
 
       {/* Drawer Menu Modal (Sliding from Left) */}
       <DrawerMenu
@@ -481,6 +615,10 @@ export default function App() {
             gamification={gamification}
             setActiveTab={navigateTo}
             onToggleGoal={handleToggleGoal}
+            focusSelectedMinutes={focusSelectedMinutes}
+            focusTimeLeftSeconds={focusTimeLeftSeconds}
+            focusIsRunning={focusIsRunning}
+            onToggleFocusTimer={handleToggleFocusTimer}
           />
         )}
 
@@ -505,7 +643,15 @@ export default function App() {
 
         {activeTab === 'focus' && (
           <FocusModeView
-            onCompleteFocusSession={handleCompleteFocusSession}
+            selectedMinutes={focusSelectedMinutes}
+            timeLeftSeconds={focusTimeLeftSeconds}
+            isRunning={focusIsRunning}
+            currentTaskTitle={focusTaskTitle}
+            onSelectMinutes={handleSelectFocusMinutes}
+            onChangeTaskTitle={setFocusTaskTitle}
+            onTogglePlay={handleToggleFocusTimer}
+            onReset={handleResetFocusTimer}
+            onQuickComplete={handleQuickCompleteFocus}
           />
         )}
 

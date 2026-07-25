@@ -1,66 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, CheckCircle2, Sparkles, Target } from 'lucide-react';
-import { playCompletionChime, startAmbientNoise, stopAmbientNoise } from '../utils/audio';
+import { startAmbientNoise, stopAmbientNoise } from '../utils/audio';
 
 interface FocusModeViewProps {
-  onCompleteFocusSession: (durationMinutes: number, taskTitle: string, mode: 'pomodoro' | 'custom' | 'micro5') => void;
+  selectedMinutes: number;
+  timeLeftSeconds: number;
+  isRunning: boolean;
+  currentTaskTitle: string;
+  onSelectMinutes: (mins: number) => void;
+  onChangeTaskTitle: (title: string) => void;
+  onTogglePlay: () => void;
+  onReset: () => void;
+  onQuickComplete: () => void;
 }
 
 export const FocusModeView: React.FC<FocusModeViewProps> = ({
-  onCompleteFocusSession
+  selectedMinutes,
+  timeLeftSeconds,
+  isRunning,
+  currentTaskTitle,
+  onSelectMinutes,
+  onChangeTaskTitle,
+  onTogglePlay,
+  onReset,
+  onQuickComplete
 }) => {
-  const [selectedMinutes, setSelectedMinutes] = useState<number>(25);
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(25 * 60);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [currentTaskTitle, setCurrentTaskTitle] = useState<string>('');
   const [ambientSound, setAmbientSound] = useState<'off' | 'white' | 'brown' | 'rain'>('off');
-  const timerRef = useRef<number | null>(null);
-
-  // Sync timer when minutes change while paused
-  const handleSelectMinutes = (mins: number) => {
-    setSelectedMinutes(mins);
-    setTimeLeftSeconds(mins * 60);
-    setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 4000);
-  };
-
-  useEffect(() => {
-    if (isRunning) {
-      timerRef.current = window.setInterval(() => {
-        setTimeLeftSeconds((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            setIsRunning(false);
-            playCompletionChime();
-            onCompleteFocusSession(selectedMinutes, currentTaskTitle || 'جلسه تمرکز', selectedMinutes === 25 ? 'pomodoro' : 'custom');
-            triggerToast('🎉 آفرین! جلسه تمرکز شما به پایان رسید و امتیاز دریافت کردید.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRunning, selectedMinutes, currentTaskTitle, onCompleteFocusSession]);
-
-  const handleTogglePlay = () => {
-    setIsRunning(!isRunning);
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    setTimeLeftSeconds(selectedMinutes * 60);
   };
 
   const handleAmbientChange = (type: 'off' | 'white' | 'brown' | 'rain') => {
@@ -82,6 +52,12 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
+      {toastMsg && (
+        <div className="p-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg text-xs">
+          {toastMsg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -93,7 +69,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
             تایمر و محیط تمرکز بدون حواس‌پرتی
           </h2>
           <p className="text-slate-500 text-sm mt-1">
-            یک کار را انتخاب کنید، تایمر را روشن کنید و صداهای نویز سفید/قهوه‌ای را برای حذف صداهای محیطی بگذارید.
+            یک کار را انتخاب کنید، تایمر را روشن کنید و صداهای نویز سفید/قهوه‌ای را برای حذف صداهای محیطی بگذارید. این تایمر با ویجت پومودورو در داشبورد هماهنگ است و حتی با تغییر تب هم ادامه می‌یابد.
           </p>
         </div>
       </div>
@@ -111,7 +87,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
             <input
               type="text"
               value={currentTaskTitle}
-              onChange={(e) => setCurrentTaskTitle(e.target.value)}
+              onChange={(e) => onChangeTaskTitle(e.target.value)}
               placeholder="مثلاً: نوشتن ۳ پاراگراف از گزارش"
               className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-center font-bold text-sm text-slate-800 focus:outline-none focus:border-orange-500 bg-slate-50/50"
             />
@@ -156,7 +132,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
           {/* Controls */}
           <div className="mt-6 flex items-center gap-4">
             <button
-              onClick={handleReset}
+              onClick={onReset}
               className="p-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-all"
               title="بازنشانی"
             >
@@ -164,7 +140,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
             </button>
 
             <button
-              onClick={handleTogglePlay}
+              onClick={onTogglePlay}
               className={`py-4 px-10 rounded-2xl font-extrabold text-base text-white shadow-lg transition-all flex items-center gap-2 ${
                 isRunning
                   ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
@@ -186,9 +162,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
 
             <button
               onClick={() => {
-                playCompletionChime();
-                onCompleteFocusSession(selectedMinutes, currentTaskTitle || 'جلسه تمرکز', selectedMinutes === 25 ? 'pomodoro' : 'custom');
-                handleReset();
+                onQuickComplete();
                 triggerToast('ثبت موفق جلسه تمرکز!');
               }}
               className="p-4 rounded-2xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 font-bold transition-all"
@@ -210,7 +184,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
               {[15, 25, 45, 60].map((mins) => (
                 <button
                   key={mins}
-                  onClick={() => handleSelectMinutes(mins)}
+                  onClick={() => onSelectMinutes(mins)}
                   className={`py-3 px-4 rounded-2xl font-bold text-xs border transition-all ${
                     selectedMinutes === mins
                       ? 'bg-orange-500 text-white border-orange-500 shadow-sm'

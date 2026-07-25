@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart3, Plus, Trash2, Zap, Target, Smile } from 'lucide-react';
 import { DailyLog } from '../types';
+import { getTodayDateString } from '../utils/storage';
 
 interface DailyLogViewProps {
   dailyLogs: DailyLog[];
@@ -11,7 +12,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
   dailyLogs,
   onSaveDailyLog
 }) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
   const [energyRating, setEnergyRating] = useState(3);
   const [focusRating, setFocusRating] = useState(3);
   const [moodRating, setMoodRating] = useState(3);
@@ -36,6 +37,21 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
   // Trend chart: shows the change across all logged days, updating live
   // after every single entry (not gated behind a minimum count).
   const recentLogs = [...dailyLogs].slice(0, 30).reverse();
+
+  // Second chart: day-over-day CHANGE in mood, not the raw value — shows
+  // whether the user is improving, declining, or steady compared to the
+  // previous day they logged, plus an overall trend across the period.
+  const moodDeltas = recentLogs.slice(1).map((log, idx) => ({
+    date: log.date,
+    delta: log.moodRating - recentLogs[idx].moodRating
+  }));
+
+  const half = Math.floor(recentLogs.length / 2);
+  const earlierHalf = recentLogs.slice(0, half);
+  const recentHalf = recentLogs.slice(recentLogs.length - half);
+  const avgMood = (logs: typeof recentLogs) =>
+    logs.length ? logs.reduce((sum, l) => sum + l.moodRating, 0) / logs.length : 0;
+  const overallTrend = recentLogs.length >= 2 ? avgMood(recentHalf) - avgMood(earlierHalf) : 0;
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -220,6 +236,60 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Second Chart: Change Over Time (not raw values — the delta) */}
+      {recentLogs.length >= 2 && (
+        <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-800">تغییرات خلق‌وخو نسبت به روز قبل</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              این نمودار نشون میده هر روز نسبت به روز قبلش بهتر شدی، بدتر شدی، یا ثابت موندی — نه فقط عدد خام هر روز.
+            </p>
+          </div>
+
+          <div
+            className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+              overallTrend > 0.15
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : overallTrend < -0.15
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : 'bg-slate-50 border-slate-200 text-slate-600'
+            }`}
+          >
+            {overallTrend > 0.15 ? (
+              <span>📈 در این بازه، خلق‌وخوت نسبت به روزهای اول بهتر شده (به‌طور میانگین {overallTrend.toFixed(1)}+ از ۵)</span>
+            ) : overallTrend < -0.15 ? (
+              <span>📉 در این بازه، خلق‌وخوت نسبت به روزهای اول کمی افت داشته ({overallTrend.toFixed(1)} از ۵)</span>
+            ) : (
+              <span>➖ در این بازه، خلق‌وخوت تقریباً ثابت بوده، بدون تغییر محسوس</span>
+            )}
+          </div>
+
+          <div className="h-40 bg-slate-50 rounded-2xl p-4 flex items-end justify-around gap-2 border border-slate-100">
+            {moodDeltas.map((d) => (
+              <div key={d.date} className="flex-1 flex flex-col items-center gap-1 h-full justify-center relative">
+                <div className="w-full flex justify-center h-full relative">
+                  {/* Zero baseline in the middle of the bar area */}
+                  <div className="absolute left-0 right-0 top-1/2 border-t border-slate-200"></div>
+                  <div
+                    className={`w-2.5 rounded-md transition-all absolute ${
+                      d.delta > 0 ? 'bg-emerald-500' : d.delta < 0 ? 'bg-rose-400' : 'bg-slate-300'
+                    }`}
+                    style={{
+                      height: `${Math.min(50, Math.abs(d.delta) * 25)}%`,
+                      top: d.delta >= 0 ? `${50 - Math.min(50, Math.abs(d.delta) * 25)}%` : '50%'
+                    }}
+                    title={`تغییر: ${d.delta > 0 ? '+' : ''}${d.delta}`}
+                  ></div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 truncate w-full text-center absolute -bottom-1">
+                  {d.date.substring(5)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

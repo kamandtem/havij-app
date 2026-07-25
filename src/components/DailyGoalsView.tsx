@@ -24,6 +24,11 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Goals that were just ticked stay visible briefly (for the celebration),
+  // then get removed from the panel per the "cleared once completed" rule.
+  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<Set<string>>(new Set());
+  const visibleGoals = goals.filter(g => !g.completed || recentlyCompletedIds.has(g.id));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -66,6 +71,23 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
       const randomPraise = praises[Math.floor(Math.random() * praises.length)];
       setPraiseMessage(randomPraise);
       setTimeout(() => setPraiseMessage(null), 5000);
+
+      // Keep the card visible for the celebration, then clear it from the panel.
+      setRecentlyCompletedIds((prev) => new Set(prev).add(id));
+      setTimeout(() => {
+        setRecentlyCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 1600);
+    } else {
+      // Un-checking a goal (e.g. via undo) should show it again immediately.
+      setRecentlyCompletedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -116,8 +138,14 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
         </div>
       )}
 
-      {/* Goals List / Empty State */}
-      {goals.length === 0 ? (
+      {/* Goals List / Empty State / All-Done State (completed goals disappear from view shortly after being ticked) */}
+      {visibleGoals.length === 0 && goals.length > 0 ? (
+        <div className="bg-emerald-50/60 rounded-[28px] border-2 border-dashed border-emerald-200 p-12 text-center flex flex-col items-center justify-center space-y-2">
+          <span className="text-4xl">🎉</span>
+          <h3 className="text-lg font-bold text-emerald-800">هر ۳ هدف امروزت رو کامل کردی!</h3>
+          <p className="text-emerald-700 text-xs">فردا با ۳ هدف جدید ادامه میدیم.</p>
+        </div>
+      ) : visibleGoals.length === 0 ? (
         <div className="bg-white rounded-[28px] border-2 border-dashed border-slate-200 p-12 text-center flex flex-col items-center justify-center space-y-4">
           <div className="w-16 h-16 rounded-3xl bg-orange-50 text-orange-500 flex items-center justify-center border border-orange-100 shadow-inner">
             <Target className="w-8 h-8" />
@@ -138,7 +166,7 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {goals.map((goal, idx) => (
+          {visibleGoals.map((goal, idx) => (
             <div
               key={goal.id}
               className={`rounded-[28px] p-6 border transition-all flex flex-col justify-between relative ${
