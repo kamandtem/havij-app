@@ -1,9 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
   LayoutDashboard,
-  Target,
-  Scissors,
-  Timer,
   Zap,
   Calendar,
   Brain,
@@ -12,9 +9,27 @@ import {
   Sprout,
   BookOpen,
   Settings,
-  Camera
+  Camera,
+  Sun
 } from 'lucide-react';
 import { UserProfile, GamificationData } from '../types';
+import { SILVER_CARROT_LEVEL, GOLDEN_CARROT_LEVEL } from '../utils/storage';
+
+// Instagram and Telegram aren't part of lucide-react's icon set, so they're
+// drawn as small inline brand glyphs to keep this file dependency-free.
+const InstagramGlyph: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const TelegramGlyph: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M21.8 4.5 3.2 11.7c-1 .4-1 1 .1 1.3l4.7 1.5 1.8 5.7c.2.6.4.8.8.8.3 0 .5-.1.7-.3l2.5-2.4 4.9 3.6c.7.4 1.2.2 1.4-.6l3.1-14.4c.3-1-.4-1.5-1.4-1.4zM8.6 14.2l9.8-6.1c.5-.3.9-.1.5.2L10.5 15l-.3 3.4-1.6-4.2z" />
+  </svg>
+);
 
 interface DrawerMenuProps {
   isOpen: boolean;
@@ -35,6 +50,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   setActiveTab,
   userProfile,
   gamification,
+  theme,
+  onToggleTheme,
   onUpdateAvatar
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,12 +66,11 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
   if (!isOpen) return null;
 
+  // اهداف روز، تمرکز و تایمر، و خردکننده کارها از منو حذف شدند چون حالا
+  // مستقیماً در نوار پایین (Bottom Nav) در دسترس هستند.
   const mainItems = [
     { id: 'dashboard', label: 'داشبورد اصلی', icon: LayoutDashboard },
     { id: 'articles', label: 'آموزش ADHD', icon: BookOpen },
-    { id: 'goals', label: '۳ هدف امروز', icon: Target },
-    { id: 'decomposer', label: 'خردکننده کارها', icon: Scissors },
-    { id: 'focus', label: 'تمرکز و تایمر', icon: Timer },
     { id: 'micro5', label: 'شروع ۵ دقیقه‌ای', icon: Zap },
   ];
 
@@ -187,12 +203,23 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               <span>روز خوش</span>
               <span className="animate-bounce">👋</span>
             </span>
-            <h3 className="text-base font-black text-slate-800 dark:text-white truncate">
-              {userProfile?.name || 'کاربر هویج'}
+            <h3 className="text-base font-black text-slate-800 dark:text-white truncate flex items-center gap-1.5">
+              <span>{userProfile?.name || 'کاربر هویج'}</span>
+              {gamification.level >= GOLDEN_CARROT_LEVEL && (
+                <span
+                  className="shrink-0 text-sm"
+                  title="نشان هویج طلایی — کاشت صدمین درخت"
+                >
+                  🥕✨
+                </span>
+              )}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px] rounded-full border border-emerald-200 dark:border-emerald-800">
-                سطح {gamification.level}
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px] rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                <span>سطح {gamification.level}</span>
+                {gamification.level >= SILVER_CARROT_LEVEL && gamification.level < GOLDEN_CARROT_LEVEL && (
+                  <span title="نشان هویج نقره‌ای — اولین درخت طلایی">🥕</span>
+                )}
               </span>
               <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
                 {gamification.points} امتیاز
@@ -200,18 +227,28 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             </div>
           </div>
 
-          {/* Settings & Profile — icon only, opens the profile/settings view */}
-          <button
-            onClick={() => handleItemClick('profile')}
-            className={`shrink-0 p-2.5 rounded-2xl transition-colors ${
-              activeTab === 'profile'
-                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700'
-            }`}
-            title="تنظیمات و پروفایل"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          {/* Settings & Profile, and Day/Night theme toggle right below it */}
+          <div className="shrink-0 flex flex-col items-center gap-2">
+            <button
+              onClick={() => handleItemClick('profile')}
+              className={`p-2.5 rounded-2xl transition-colors ${
+                activeTab === 'profile'
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700'
+              }`}
+              title="تنظیمات و پروفایل"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={onToggleTheme}
+              className="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-amber-500 dark:text-indigo-300 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors"
+              title={theme === 'dark' ? 'حالت روز' : 'حالت شب'}
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation Sections */}
@@ -290,6 +327,33 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               );
             })}
           </div>
+        </div>
+
+        {/* Social media footer */}
+        <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+          <div className="flex items-center justify-center gap-4">
+            <a
+              href="https://www.instagram.com/havij.adhd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+              title="اینستاگرام هویج"
+            >
+              <InstagramGlyph className="w-5 h-5" />
+            </a>
+            <a
+              href="https://t.me/havij_adhd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+              title="تلگرام هویج"
+            >
+              <TelegramGlyph className="w-5 h-5" />
+            </a>
+          </div>
+          <p className="text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
+            ما را در شبکه‌های اجتماعی دنبال کنید
+          </p>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { Scissors, Plus, CheckCircle2, Trash2, ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
 import { TaskDecomposed } from '../types';
 
@@ -23,6 +24,7 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   const handleAddSubtaskInput = () => {
     setSubtaskInputs([...subtaskInputs, '']);
@@ -58,7 +60,7 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
           </div>
           <ChevronDown
             className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-              isHeaderOpen ? 'rotate-180' : ''
+              isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
             }`}
           />
         </button>

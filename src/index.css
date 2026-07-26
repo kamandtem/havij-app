@@ -69,3 +69,26 @@
   animation: pulse-ring 3s infinite ease-in-out;
 }
 
+/* Gentle "tap me" nudge for collapsed accordion chevrons — only shown
+   during the first few days after install (see src/utils/hint.ts). */
+@keyframes chevron-hint {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+.animate-chevron-hint {
+  animation: chevron-hint 1.4s ease-in-out infinite;
+}
+
+/* Bell "ring" nudge, same first-days-only hint pattern. */
+@keyframes bell-hint {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(-12deg); }
+  30% { transform: rotate(10deg); }
+  45% { transform: rotate(-8deg); }
+  60% { transform: rotate(4deg); }
+  75%, 100% { transform: rotate(0deg); }
+}
+.animate-bell-hint {
+  animation: bell-hint 2.2s ease-in-out infinite;
+}
+

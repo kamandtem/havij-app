@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, CheckCircle2, Sparkles, Target, ChevronDown } from 'lucide-react';
 import { startAmbientNoise, stopAmbientNoise, playMicroChime } from '../utils/audio';
 
@@ -30,6 +31,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -81,7 +83,7 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
           </div>
           <ChevronDown
             className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-              isHeaderOpen ? 'rotate-180' : ''
+              isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
             }`}
           />
         </button>

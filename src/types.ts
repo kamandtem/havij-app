@@ -84,12 +84,36 @@ export interface SleepLog {
   notes?: string;
 }
 
+// Tracks how many times each "tool" (feature) has been used, independent of
+// how many of those items still exist (deleting a task shouldn't undo badge
+// progress). Badges are granted once the matching counter reaches 3 — NOT
+// from raw points — so a badge always means "used this tool 3 times",
+// regardless of which activity happened to earn the points along the way.
+export interface ToolUsageCounts {
+  goals: number;
+  focus: number;
+  decomposer: number;
+  cbt: number;
+  sleep: number;
+}
+
+// A single tree that has finished growing and been "planted" in the garden bed.
+export interface GardenTree {
+  id: string;
+  completedAt: string;
+  golden?: boolean; // true once 10 regular trees have merged into this one
+}
+
 export interface GamificationData {
   points: number;
   coins: number;
-  level: number;
-  treeGrowthStage: number; // 0 to 4
+  level: number; // 0-6 tier, computed from totalTreesCompleted (see LEVEL_THRESHOLDS)
+  totalTreesCompleted: number; // lifetime count of fully grown trees, never resets
+  treeGrowthStage: number; // 0 to 4 — growth stage of the CURRENT sapling only
   unlockedBadges: string[];
+  toolUsage: ToolUsageCounts;
+  gardenTrees: GardenTree[]; // current cycle's planted trees (max 10 before merge)
+  goldenMerges: number; // how many times 10 trees have merged into a golden tree
 }
 
 export interface NotificationSettings {
@@ -106,6 +130,7 @@ export interface NotificationSettings {
 
 export interface JournalNote {
   id: string;
+  title?: string;
   content: string;
   createdAt: string;
   updatedAt: string;

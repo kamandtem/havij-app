@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { BarChart3, Plus, Trash2, Zap, Target, Smile, ChevronDown } from 'lucide-react';
 import { DailyLog } from '../types';
 import { getTodayDateString } from '../utils/storage';
@@ -22,6 +23,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +78,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
           </div>
           <ChevronDown
             className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-              isHeaderOpen ? 'rotate-180' : ''
+              isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
             }`}
           />
         </button>

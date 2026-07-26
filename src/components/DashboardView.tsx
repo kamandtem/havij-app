@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Target,
   Timer,
@@ -13,10 +13,14 @@ import {
   Play,
   CheckCircle2,
   Sparkles,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown,
+  BookOpen
 } from 'lucide-react';
-import { UserProfile, DailyGoal, GamificationData } from '../types';
+import { UserProfile, DailyGoal, GamificationData, Article } from '../types';
 import { playMicroChime } from '../utils/audio';
+import { ADHD_ARTICLES } from '../data/articles';
+import { ArticleStoryView } from './ArticleStoryView';
 
 interface DashboardViewProps {
   userProfile: UserProfile | null;
@@ -44,8 +48,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const completedGoalsCount = dailyGoals.filter(g => g.completed).length;
   const visibleGoals = dailyGoals.filter(g => !g.completed);
 
+  // Today's progress is now driven purely by the 3 golden goals: finishing
+  // all 3 always means 100%, regardless of total points earned.
+  const todayProgressPercent = Math.min(100, Math.round((completedGoalsCount / 3) * 100));
+
   const focusMinutesDisplay = String(Math.floor(focusTimeLeftSeconds / 60)).padStart(2, '0');
   const focusSecondsDisplay = String(focusTimeLeftSeconds % 60).padStart(2, '0');
+
+  // Header greeting accordion: collapsed by default to a short one-line
+  // greeting; tapping the chevron reveals the level/points summary.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const [storyArticle, setStoryArticle] = useState<Article | null>(null);
+
+  const openRandomStory = () => {
+    const idx = Math.floor(Math.random() * ADHD_ARTICLES.length);
+    setStoryArticle(ADHD_ARTICLES[idx]);
+  };
 
   // Play the same short chime used on the 5-minute-start button whenever
   // the user taps the Pomodoro widget's play/pause control.
@@ -56,29 +74,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Header Greeting */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 backdrop-blur-md p-6 rounded-[28px] border border-slate-200/70 shadow-xs">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-            سلام {userProfile?.name ? `${userProfile.name}` : 'دوست عزیز'}! آماده‌ای؟
-          </h2>
-          <p className="text-slate-500 mt-1 text-sm italic font-medium">
-            «امروز تمرکزمون فقط روی ۳ هدف طلایی کوچک هست.»
-          </p>
-        </div>
+      {/* Header Greeting — collapsed to a short line + story bubble by
+          default; tapping the chevron opens level/points. */}
+      <div className="bg-white/80 backdrop-blur-md rounded-[28px] border border-slate-200/70 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between gap-3 p-5 sm:p-6">
+          <div className="flex items-center gap-3.5 min-w-0">
+            {/* Instagram-story-style circular bubble → random education article */}
+            <button
+              onClick={openRandomStory}
+              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full p-[3px] bg-gradient-to-tr from-orange-400 via-rose-500 to-amber-400 hover:scale-105 active:scale-95 transition-transform"
+              title="یک مقاله تصادفی آموزشی را ببین"
+            >
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center border-2 border-white">
+                <BookOpen className="w-6 h-6 text-orange-500" />
+              </div>
+            </button>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="px-3.5 py-2 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-2 text-xs font-bold text-slate-700">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>وضعیت: آماده تمرکز</span>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-extrabold text-slate-800 tracking-tight truncate">
+                سلام {userProfile?.name ? `${userProfile.name}` : 'دوست عزیز'}
+              </h2>
+              <p className="text-slate-500 mt-0.5 text-xs sm:text-sm font-bold">
+                تمرکز امروزمون روی سه هدفه
+              </p>
+            </div>
           </div>
 
-          <div className="px-3.5 py-2 bg-orange-50 rounded-2xl border border-orange-200/80 flex items-center gap-2 text-xs font-bold text-orange-600">
-            <Sparkles className="w-4 h-4 text-orange-500" />
-            <span>سطح {gamification.level} ({gamification.points} امتیاز)</span>
-          </div>
+          <button
+            onClick={() => setIsHeaderOpen((o) => !o)}
+            className="shrink-0 p-2.5 rounded-2xl bg-slate-50 hover:bg-orange-50 text-slate-400 hover:text-orange-600 border border-slate-200/80 transition-all"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isHeaderOpen ? 'rotate-180' : ''}`} />
+          </button>
         </div>
+
+        {isHeaderOpen && (
+          <div className="px-5 sm:px-6 pb-5 sm:pb-6 -mt-1 flex flex-wrap items-center gap-2.5">
+            <div className="px-3.5 py-2 bg-orange-50 rounded-2xl border border-orange-200/80 flex items-center gap-2 text-xs font-bold text-orange-600">
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              <span>سطح {gamification.level} ({gamification.points} امتیاز)</span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {storyArticle && (
+        <ArticleStoryView article={storyArticle} onClose={() => setStoryArticle(null)} />
+      )}
 
       {/* Main Grid Layout matching Clean Minimalism theme */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -99,10 +141,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          <div className="w-full max-w-xs flex gap-2.5">
+          <div className="w-full max-w-xs flex flex-col gap-2.5">
             <button
               onClick={handlePomodoroToggle}
-              className={`flex-1 py-3.5 px-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 px-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
                 focusIsRunning
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
                   : 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
@@ -113,7 +155,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('focus')}
-              className="flex-1 py-3.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 rounded-2xl font-bold transition-all"
+              className="w-full py-3.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 rounded-2xl font-bold transition-all"
             >
               ورود به حالت تمرکز
             </button>
@@ -354,12 +396,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="mt-6 space-y-2">
             <div className="flex justify-between text-xs font-bold text-orange-100">
               <span>پیشرفت امروز</span>
-              <span>{Math.min(100, (gamification.points % 100))}%</span>
+              <span>{todayProgressPercent}%</span>
             </div>
             <div className="w-full bg-black/20 h-2.5 rounded-full overflow-hidden p-0.5 backdrop-blur-xs">
               <div
                 className="bg-white h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (gamification.points % 100))}%` }}
+                style={{ width: `${todayProgressPercent}%` }}
               ></div>
             </div>
           </div>

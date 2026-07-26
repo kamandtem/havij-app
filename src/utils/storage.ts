@@ -8,6 +8,7 @@ import {
   DailyLog,
   SleepLog,
   GamificationData,
+  ToolUsageCounts,
   NotificationSettings,
   PinSettings,
   JournalNote
@@ -149,7 +150,8 @@ export function saveFocusLog(log: FocusSessionLog): void {
   const current = getStoredFocusLogs();
   current.unshift(log);
   localStorage.setItem(STORAGE_KEYS.FOCUS_LOGS, JSON.stringify(current));
-  addPointsAndCoins(25, 10); // Reward focus completion
+  // Grows the tree and counts toward the "استاد تمرکز" badge (3 sessions).
+  recordToolUsage('focus', 25, 0);
 }
 
 // Timeline
@@ -172,7 +174,8 @@ export function saveCBTEntry(entry: CBTEntry): void {
   const current = getStoredCBTEntries();
   current.unshift(entry);
   localStorage.setItem(STORAGE_KEYS.CBT_ENTRIES, JSON.stringify(current));
-  addPointsAndCoins(15, 5);
+  // Grows the tree and counts toward the "آرامش ذهنی" badge (3 entries).
+  recordToolUsage('cbt', 15, 0);
 }
 
 // Daily Logs
@@ -190,7 +193,8 @@ export function saveDailyLog(log: DailyLog): void {
     current.unshift(log);
   }
   localStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(current));
-  addPointsAndCoins(10, 5);
+  // Daily check-in isn't tied to a specific badge — it still grows the tree.
+  addPointsOnly(10);
 }
 
 // Sleep Logs
@@ -208,52 +212,185 @@ export function saveSleepLog(log: SleepLog): void {
     current.unshift(log);
   }
   localStorage.setItem(STORAGE_KEYS.SLEEP_LOGS, JSON.stringify(current));
-  addPointsAndCoins(10, 5);
+  // Grows the tree and counts toward the "قهرمان خواب منظم" badge (3 logs).
+  recordToolUsage('sleep', 10, 0);
 }
 
 // Gamification
-export function getStoredGamification(): GamificationData {
-  const raw = localStorage.getItem(STORAGE_KEYS.GAMIFICATION);
-  if (raw) return JSON.parse(raw);
+// ---------------------------------------------------------------------------
+// Points needed (cumulative, toward the CURRENT sapling) for each growth
+// stage. Reaching the last one (350) means the sapling is fully grown: it
+// gets "planted" in the garden bed and a brand new sapling starts at 0.
+export const TREE_STAGE_THRESHOLDS = [0, 50, 100, 200, 350];
+const POINTS_PER_TREE = TREE_STAGE_THRESHOLDS[TREE_STAGE_THRESHOLDS.length - 1];
+// How many planted trees fill one garden bed before they merge into a single
+// golden tree that takes the first spot.
+export const GARDEN_SIZE = 10;
+
+// User level tiers, keyed to the lifetime tree count (not the per-cycle
+// garden bed, which resets every 10 trees). Reaching the Nth tree count in
+// this list grants level N+1. Level 3 (10th tree / 1st golden tree) grants a
+// silver carrot badge; level 6 (100th tree / 10th golden tree) grants a
+// golden carrot badge — both shown next to the user in the side menu.
+export const LEVEL_TREE_THRESHOLDS = [1, 5, 10, 20, 50, 100];
+export const SILVER_CARROT_LEVEL = 3;
+export const GOLDEN_CARROT_LEVEL = 6;
+
+function computeLevel(totalTreesCompleted: number): number {
+  let level = 0;
+  for (let i = 0; i < LEVEL_TREE_THRESHOLDS.length; i++) {
+    if (totalTreesCompleted >= LEVEL_TREE_THRESHOLDS[i]) {
+      level = i + 1;
+    }
+  }
+  return level;
+}
+
+// Which "tool" each badge is tied to, and how many times that tool must be
+// used (regardless of points earned elsewhere) before the badge unlocks.
+export const BADGE_TOOL_MAP: Record<string, keyof ToolUsageCounts> = {
+  first_goal: 'goals',
+  focus_master: 'focus',
+  task_slayer: 'decomposer',
+  cbt_champion: 'cbt',
+  sleep_hero: 'sleep'
+};
+export const BADGE_USES_REQUIRED = 3;
+
+function defaultGamification(): GamificationData {
   return {
     points: 0,
     coins: 0,
-    level: 1,
+    level: 0,
+    totalTreesCompleted: 0,
     treeGrowthStage: 0,
-    unlockedBadges: []
+    unlockedBadges: [],
+    toolUsage: { goals: 0, focus: 0, decomposer: 0, cbt: 0, sleep: 0 },
+    gardenTrees: [],
+    goldenMerges: 0
   };
+}
+
+export function getStoredGamification(): GamificationData {
+  const raw = localStorage.getItem(STORAGE_KEYS.GAMIFICATION);
+  if (!raw) return defaultGamification();
+  try {
+    const parsed = JSON.parse(raw);
+    // Merge with defaults so users upgrading from an older version (before
+    // tool-usage / garden tracking existed) get sane fallback values instead
+    // of undefined fields breaking the new UI.
+    return {
+      ...defaultGamification(),
+      ...parsed,
+      toolUsage: { ...defaultGamification().toolUsage, ...(parsed.toolUsage || {}) }
+    };
+  } catch {
+    return defaultGamification();
+  }
 }
 
 export function saveGamification(data: GamificationData): void {
   localStorage.setItem(STORAGE_KEYS.GAMIFICATION, JSON.stringify(data));
 }
 
-export function addPointsAndCoins(earnedPoints: number, earnedCoins: number): GamificationData {
+// Grows the current sapling by `earnedPoints`. If it reaches full growth,
+// it's moved into the garden bed (and, every 10 trees, merged into a single
+// golden tree), a new sapling starts from zero, and the user's level — the
+// lifetime count of fully grown trees — goes up. Coins are only ever passed
+// in for the Task Decomposer ("خردکن"), per the app's coin rule.
+function growTreeAndAddPoints(current: GamificationData, earnedPoints: number, earnedCoins: number): GamificationData {
+  let points = current.points + earnedPoints;
+  let totalTreesCompleted = current.totalTreesCompleted;
+  let gardenTrees = [...current.gardenTrees];
+  let goldenMerges = current.goldenMerges;
+
+  // A single big point award could, in theory, finish more than one tree —
+  // loop so none of that progress is lost.
+  while (points >= POINTS_PER_TREE) {
+    points -= POINTS_PER_TREE;
+    totalTreesCompleted += 1;
+    gardenTrees.push({ id: `${Date.now()}-${totalTreesCompleted}`, completedAt: new Date().toISOString() });
+
+    if (gardenTrees.length >= GARDEN_SIZE) {
+      goldenMerges += 1;
+      gardenTrees = [{ id: `golden-${Date.now()}`, completedAt: new Date().toISOString(), golden: true }];
+    }
+  }
+
+  const level = computeLevel(totalTreesCompleted);
+
+  let stage = 0;
+  for (let i = TREE_STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (points >= TREE_STAGE_THRESHOLDS[i]) {
+      stage = i;
+      break;
+    }
+  }
+
+  let unlockedBadges = current.unlockedBadges;
+  // "باغبان طلایی" isn't tied to a tool — it unlocks the first time a full
+  // garden bed (10 trees) merges into a golden tree.
+  if (goldenMerges >= 1 && !unlockedBadges.includes('golden_tree')) {
+    unlockedBadges = [...unlockedBadges, 'golden_tree'];
+  }
+
+  return {
+    ...current,
+    points,
+    coins: current.coins + earnedCoins,
+    level,
+    totalTreesCompleted,
+    treeGrowthStage: stage,
+    gardenTrees,
+    goldenMerges,
+    unlockedBadges
+  };
+}
+
+// Awards points (and, only for the decomposer, coins) for using a specific
+// tool, tracks how many times that tool has been used, and unlocks its badge
+// once that reaches 3 uses — independent of the points/tree growth, and
+// independent of whether the underlying item (a task, a log entry...) still
+// exists later.
+export function recordToolUsage(tool: keyof ToolUsageCounts, earnedPoints: number, earnedCoins: number): GamificationData {
   const current = getStoredGamification();
-  const newPoints = current.points + earnedPoints;
-  const newCoins = current.coins + earnedCoins;
-  const newLevel = Math.floor(newPoints / 100) + 1;
-  const newStage = Math.min(4, Math.floor(newPoints / 50));
+  // Per the app's coin rule, only the Task Decomposer ("خردکن") earns coins;
+  // every other tool grows the tree with points alone.
+  const coinsToAward = tool === 'decomposer' ? earnedCoins : 0;
+
+  const grown = growTreeAndAddPoints(current, earnedPoints, coinsToAward);
+
+  const newToolUsage: ToolUsageCounts = {
+    ...grown.toolUsage,
+    [tool]: grown.toolUsage[tool] + 1
+  };
+
+  const badgeId = Object.keys(BADGE_TOOL_MAP).find((id) => BADGE_TOOL_MAP[id] === tool);
+  let unlockedBadges = grown.unlockedBadges;
+  if (badgeId && newToolUsage[tool] >= BADGE_USES_REQUIRED && !unlockedBadges.includes(badgeId)) {
+    unlockedBadges = [...unlockedBadges, badgeId];
+  }
 
   const updated: GamificationData = {
-    ...current,
-    points: newPoints,
-    coins: newCoins,
-    level: newLevel,
-    treeGrowthStage: newStage
+    ...grown,
+    toolUsage: newToolUsage,
+    unlockedBadges
   };
   saveGamification(updated);
   return updated;
 }
 
+// Awards points only (no coins, no tool/badge tracking) — for activities like
+// the daily check-in that grow the tree but aren't tied to a specific badge.
+export function addPointsOnly(earnedPoints: number): GamificationData {
+  const current = getStoredGamification();
+  const updated = growTreeAndAddPoints(current, earnedPoints, 0);
+  saveGamification(updated);
+  return updated;
+}
+
 export function resetGamification(): GamificationData {
-  const initialData: GamificationData = {
-    points: 0,
-    coins: 0,
-    level: 1,
-    treeGrowthStage: 0,
-    unlockedBadges: []
-  };
+  const initialData = defaultGamification();
   saveGamification(initialData);
   return initialData;
 }

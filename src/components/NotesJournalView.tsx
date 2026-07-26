@@ -1,11 +1,56 @@
 import React, { useState } from 'react';
-import { ChevronRight, Plus, Trash2, StickyNote } from 'lucide-react';
+import { ChevronRight, Plus, Trash2, StickyNote, Heart, BookOpen, Pin, Star } from 'lucide-react';
 import { JournalNote } from '../types';
 import { getStoredJournalNotes, saveJournalNotes } from '../utils/storage';
 
 interface NotesJournalViewProps {
   onClose: () => void;
 }
+
+// Soft, muted color themes cycled across notes so the archive reads as
+// colorful/organized without ever feeling loud or harsh.
+const PALETTES = [
+  {
+    icon: StickyNote,
+    pill: 'bg-orange-300 dark:bg-orange-500/70',
+    card: 'bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/15',
+    title: 'text-orange-900 dark:text-orange-200',
+    date: 'text-orange-500/80 dark:text-orange-300/70',
+    preview: 'text-orange-800/60 dark:text-orange-200/50'
+  },
+  {
+    icon: Heart,
+    pill: 'bg-rose-300 dark:bg-rose-500/70',
+    card: 'bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/15',
+    title: 'text-rose-900 dark:text-rose-200',
+    date: 'text-rose-500/80 dark:text-rose-300/70',
+    preview: 'text-rose-800/60 dark:text-rose-200/50'
+  },
+  {
+    icon: BookOpen,
+    pill: 'bg-amber-300 dark:bg-amber-500/70',
+    card: 'bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/15',
+    title: 'text-amber-900 dark:text-amber-200',
+    date: 'text-amber-600/80 dark:text-amber-300/70',
+    preview: 'text-amber-800/60 dark:text-amber-200/50'
+  },
+  {
+    icon: Pin,
+    pill: 'bg-teal-300 dark:bg-teal-500/70',
+    card: 'bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/15',
+    title: 'text-teal-900 dark:text-teal-200',
+    date: 'text-teal-600/80 dark:text-teal-300/70',
+    preview: 'text-teal-800/60 dark:text-teal-200/50'
+  },
+  {
+    icon: Star,
+    pill: 'bg-indigo-300 dark:bg-indigo-500/70',
+    card: 'bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/15',
+    title: 'text-indigo-900 dark:text-indigo-200',
+    date: 'text-indigo-600/80 dark:text-indigo-300/70',
+    preview: 'text-indigo-800/60 dark:text-indigo-200/50'
+  }
+];
 
 // Formats a note's timestamp the way iOS Notes shows it in the list
 // (e.g. "۲۵ تیر"، ساعت هم برای امروز).
@@ -19,22 +64,31 @@ const formatNoteDate = (iso: string) => {
   return d.toLocaleDateString('fa-IR', { month: 'long', day: 'numeric' });
 };
 
-const firstLine = (content: string) => {
-  const line = content.split('\n')[0].trim();
-  if (!line) return 'یادداشت خالی';
-  return line.length > 45 ? line.slice(0, 45) + '…' : line;
+const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
+
+// Explicit title wins; otherwise fall back to the first line of the body,
+// exactly like the plain-text notes people already have saved.
+const noteTitle = (note: JournalNote) => {
+  const explicit = note.title?.trim();
+  if (explicit) return truncate(explicit, 40);
+  const firstLine = note.content.split('\n')[0].trim();
+  return firstLine ? truncate(firstLine, 40) : 'یادداشت خالی';
 };
 
-const restPreview = (content: string) => {
-  const lines = content.split('\n');
-  const rest = lines.slice(1).join(' ').trim();
-  return rest.length > 60 ? rest.slice(0, 60) + '…' : rest;
+const notePreview = (note: JournalNote) => {
+  const hasExplicitTitle = !!note.title?.trim();
+  const lines = note.content.split('\n');
+  const body = hasExplicitTitle ? note.content.trim() : lines.slice(1).join(' ').trim();
+  return truncate(body.replace(/\s+/g, ' '), 70);
 };
 
 export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) => {
   const [notes, setNotes] = useState<JournalNote[]>(getStoredJournalNotes());
-  // 'new' = composing a brand new note, a note id = editing that note, null = showing the list
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  // The "+" in the bottom nav should drop the user straight into writing,
+  // so the editor for a brand-new note is the default screen on mount.
+  // 'new' = composing a brand new note, a note id = editing that note, null = showing the archive.
+  const [activeNoteId, setActiveNoteId] = useState<string | null>('new');
+  const [draftTitle, setDraftTitle] = useState('');
   const [draft, setDraft] = useState('');
 
   const isEditing = activeNoteId !== null;
@@ -46,35 +100,43 @@ export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) =
 
   const openNewNote = () => {
     setActiveNoteId('new');
+    setDraftTitle('');
     setDraft('');
   };
 
   const openNote = (note: JournalNote) => {
     setActiveNoteId(note.id);
+    setDraftTitle(note.title ?? '');
     setDraft(note.content);
   };
 
-  // Saving happens automatically when the user leaves the editor —
-  // no separate "save" button, exactly like the Notes app.
+  // Back-button flow:
+  //  - from the editor: save (if there's anything to save) and land on the
+  //    colorful archive screen below — never straight back to the home tab.
+  //  - from the archive: hand control back to the caller (the home panel).
   const closeEditor = () => {
-    const trimmed = draft.trim();
+    const trimmedContent = draft.trim();
+    const trimmedTitle = draftTitle.trim();
 
     if (activeNoteId === 'new') {
-      if (trimmed) {
+      if (trimmedContent || trimmedTitle) {
         const now = new Date().toISOString();
         const newNote: JournalNote = {
           id: `note_${Date.now()}`,
-          content: trimmed,
+          title: trimmedTitle || undefined,
+          content: trimmedContent,
           createdAt: now,
           updatedAt: now
         };
         persist([newNote, ...notes]);
       }
     } else if (activeNoteId) {
-      if (trimmed) {
+      if (trimmedContent || trimmedTitle) {
         persist(
           notes.map((n) =>
-            n.id === activeNoteId ? { ...n, content: trimmed, updatedAt: new Date().toISOString() } : n
+            n.id === activeNoteId
+              ? { ...n, title: trimmedTitle || undefined, content: trimmedContent, updatedAt: new Date().toISOString() }
+              : n
           )
         );
       } else {
@@ -84,6 +146,7 @@ export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) =
     }
 
     setActiveNoteId(null);
+    setDraftTitle('');
     setDraft('');
   };
 
@@ -103,17 +166,24 @@ export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) =
           <div className="flex items-center justify-between px-3 pt-[max(1rem,env(safe-area-inset-top))] pb-2 shrink-0">
             <button
               onClick={closeEditor}
-              className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400 font-bold text-sm px-2 py-1.5 rounded-xl active:bg-orange-50 dark:active:bg-slate-800"
+              className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400 font-bold text-sm px-2 py-1.5 -mx-2 rounded-xl active:bg-orange-50 dark:active:bg-slate-800"
             >
               <ChevronRight className="w-4 h-4" />
-              <span>یادداشت‌ها</span>
+              <span>بازگشت</span>
             </button>
             <span className="text-[11px] font-bold text-slate-400">
               {new Date().toLocaleDateString('fa-IR', { month: 'long', day: 'numeric' })}
             </span>
           </div>
-          <textarea
+          <input
             autoFocus
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            placeholder="عنوان یادداشت"
+            className="mx-5 mt-2 mb-2 bg-transparent outline-none text-[19px] font-black text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 shrink-0"
+          />
+          <div className="mx-5 h-px bg-slate-200/80 dark:bg-slate-800 mb-2 shrink-0" />
+          <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="بنویس... هرچی تو ذهنته"
@@ -121,26 +191,23 @@ export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) =
           />
         </>
       ) : (
-        // ----- List screen -----
+        // ----- Archive / list screen -----
         <>
-          <div className="flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 shrink-0">
+          <div className="flex items-center px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 shrink-0">
             <button
               onClick={onClose}
-              className="text-orange-600 dark:text-orange-400 font-bold text-sm px-2 py-1.5 -mx-2 rounded-xl active:bg-orange-50 dark:active:bg-slate-800"
+              className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400 font-bold text-sm px-2 py-1.5 -mx-2 rounded-xl active:bg-orange-50 dark:active:bg-slate-800 shrink-0"
             >
-              بستن
+              <ChevronRight className="w-4 h-4" />
+              <span>بازگشت</span>
             </button>
-            <h2 className="text-[15px] font-black text-slate-800 dark:text-white">یادداشت‌های روزانه</h2>
-            <button
-              onClick={openNewNote}
-              className="p-2 -m-2 text-orange-600 dark:text-orange-400"
-              title="یادداشت جدید"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            <h2 className="flex-1 text-center text-[15px] font-black text-slate-800 dark:text-white">
+              یادداشت روزانه
+            </h2>
+            <span className="w-[64px] shrink-0" />
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-8">
+          <div className="flex-1 overflow-y-auto px-4 pb-32">
             {notes.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-6">
                 <StickyNote className="w-12 h-12 text-slate-300 dark:text-slate-700" />
@@ -158,38 +225,64 @@ export const NotesJournalView: React.FC<NotesJournalViewProps> = ({ onClose }) =
                 </button>
               </div>
             ) : (
-              <ul className="divide-y divide-slate-200/70 dark:divide-slate-800">
-                {notes.map((note) => (
-                  <li key={note.id}>
-                    <button
-                      onClick={() => openNote(note)}
-                      className="w-full text-right py-3.5 flex items-start justify-between gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-400 mb-0.5">
-                          {formatNoteDate(note.updatedAt)}
-                        </p>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                          {firstLine(note.content)}
-                        </p>
-                        {restPreview(note.content) && (
-                          <p className="text-xs text-slate-400 truncate mt-0.5">
-                            {restPreview(note.content)}
-                          </p>
+              <div className="flex flex-col pt-1">
+                {notes.map((note, idx) => {
+                  const palette = PALETTES[idx % PALETTES.length];
+                  const Icon = palette.icon;
+                  const preview = notePreview(note);
+                  return (
+                    <div key={note.id} className="flex items-stretch gap-3">
+                      <div className="flex flex-col items-center shrink-0 pt-0.5">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${palette.pill}`}
+                        >
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        {idx < notes.length - 1 && (
+                          <div className="flex-1 w-0 border-r-2 border-dashed border-slate-300/70 dark:border-slate-700 my-1.5" />
                         )}
                       </div>
-                      <span
-                        onClick={(e) => deleteNote(note.id, e)}
-                        className="shrink-0 p-2 rounded-xl text-slate-300 dark:text-slate-600 active:bg-rose-50 active:text-rose-500 dark:active:bg-rose-950/40 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+
+                      <div className={`relative flex-1 rounded-2xl p-4 mb-4 ${palette.card}`}>
+                        <button onClick={() => openNote(note)} className="w-full text-right block">
+                          <div dir="ltr" className="flex items-center justify-between gap-2 mb-1">
+                            <h3 className={`text-sm font-black truncate ${palette.title}`}>
+                              {noteTitle(note)}
+                            </h3>
+                            <span className={`text-[11px] font-bold shrink-0 ${palette.date}`}>
+                              {formatNoteDate(note.updatedAt)}
+                            </span>
+                          </div>
+                          {preview && (
+                            <p className={`text-xs leading-5 line-clamp-2 ${palette.preview}`}>{preview}</p>
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => deleteNote(note.id, e)}
+                          className="absolute bottom-2 left-2 p-1.5 rounded-lg text-black/25 dark:text-white/25 active:bg-black/5 dark:active:bg-white/10 active:text-rose-500 dark:active:text-rose-400 transition-colors"
+                          title="حذف یادداشت"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
+
+          {notes.length > 0 && (
+            <div className="fixed bottom-0 inset-x-0 flex justify-center pb-[max(1.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+              <button
+                onClick={openNewNote}
+                className="pointer-events-auto w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white flex items-center justify-center shadow-xl shadow-orange-500/30 transition-all"
+                title="یادداشت جدید"
+              >
+                <Plus className="w-6 h-6 stroke-[2.5]" />
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

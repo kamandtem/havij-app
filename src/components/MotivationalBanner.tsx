@@ -34,12 +34,12 @@ export const MotivationalBanner: React.FC = () => {
         dir="rtl"
         className="flex items-center gap-3 bg-gradient-to-l from-lime-50 to-emerald-50/60 dark:from-emerald-950/40 dark:to-slate-900/40 border border-emerald-100/80 dark:border-emerald-900/50 rounded-full px-4 py-3 shadow-xs"
       >
-        <span className="shrink-0 w-9 h-9 rounded-full bg-white/80 dark:bg-slate-900/60 flex items-center justify-center text-lg">
-          🌱
-        </span>
         <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
           {message}
         </p>
+        <span className="shrink-0 w-9 h-9 rounded-full bg-white/80 dark:bg-slate-900/60 flex items-center justify-center text-lg">
+          🌱
+        </span>
       </div>
     </div>
   );

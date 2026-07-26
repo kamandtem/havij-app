@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { Moon, Sun, Plus, Star, ShieldCheck, Sparkles, ChevronDown } from 'lucide-react';
 import { SleepLog } from '../types';
 import { getTodayDateString } from '../utils/storage';
@@ -22,6 +23,7 @@ export const SleepTrackerView: React.FC<SleepTrackerViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +80,7 @@ export const SleepTrackerView: React.FC<SleepTrackerViewProps> = ({
           </div>
           <ChevronDown
             className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-              isHeaderOpen ? 'rotate-180' : ''
+              isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
             }`}
           />
         </button>

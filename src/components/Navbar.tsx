@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { DailyGoal, DailyLog, SleepLog } from '../types';
 import { NotificationBell } from './NotificationBell';
 
@@ -13,8 +13,6 @@ interface NavbarProps {
   focusIsRunning: boolean;
   focusTimeLeftSeconds: number;
   focusTaskTitle: string;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,9 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   sleepLogs,
   focusIsRunning,
   focusTimeLeftSeconds,
-  focusTaskTitle,
-  theme,
-  onToggleTheme
+  focusTaskTitle
 }) => {
   return (
     // Soft gradient zone behind the floating header — it doesn't touch the
@@ -64,17 +60,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Left Side (RTL end): Theme toggle + Reminders Bell */}
+        {/* Left Side (RTL end): Reminders Bell */}
         <div className="flex items-center gap-2.5">
-          {/* Day/Night theme toggle */}
-          <button
-            onClick={onToggleTheme}
-            className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-amber-500 dark:text-indigo-300 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors"
-            title={theme === 'dark' ? 'حالت روز' : 'حالت شب'}
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-
           {/* Reminders */}
           <NotificationBell
             dailyGoals={dailyGoals}

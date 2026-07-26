@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, Target, Smile, Moon, Timer, PartyPopper } from 'lucide-react';
 import { DailyGoal, DailyLog, SleepLog } from '../types';
 import { getTodayDateString } from '../utils/storage';
+import { useBellHint } from '../utils/hint';
 
 interface ReminderItem {
   id: string;
@@ -31,6 +32,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const today = getTodayDateString();
+  const { showHint, markSeen } = useBellHint();
+
+  // Same logic as the Dashboard: completing all 3 golden goals always
+  // means 100%, regardless of total points earned.
+  const completedGoalsCount = dailyGoals.filter((g) => g.completed).length;
+  const todayProgressPercent = Math.min(100, Math.round((completedGoalsCount / 3) * 100));
 
   const reminders: ReminderItem[] = [];
 
@@ -96,11 +103,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={() => {
+          setIsOpen((v) => !v);
+          // Once opened, the hint is dismissed for good — the user won't
+          // need to reopen it on a future visit just to make it stop.
+          markSeen();
+        }}
         className="relative p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 transition-colors"
         title="یادآوری‌ها"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className={`w-5 h-5 ${showHint ? 'animate-bell-hint' : ''}`} />
         {reminders.length > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900">
             {reminders.length > 9 ? '9+' : reminders.length}
@@ -119,6 +131,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
           >
             <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
               <span className="text-xs font-black text-slate-700 dark:text-slate-200">یادآوری‌های امروز</span>
+            </div>
+
+            {/* Today's progress — same 3-golden-goals logic as the Dashboard */}
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 space-y-2">
+              <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                <span>پیشرفت امروز</span>
+                <span className="text-orange-600 dark:text-orange-400">{todayProgressPercent}%</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-orange-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${todayProgressPercent}%` }}
+                ></div>
+              </div>
             </div>
 
             <div className="p-2 max-h-80 overflow-y-auto">

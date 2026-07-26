@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { Target, Plus, CheckCircle2, Trash2, Clock, AlertCircle, Sparkles, ChevronDown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { DailyGoal } from '../types';
@@ -26,17 +27,26 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   // Goals that were just ticked stay visible briefly (for the celebration),
   // then get removed from the panel per the "cleared once completed" rule.
   const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<Set<string>>(new Set());
   const visibleGoals = goals.filter(g => !g.completed || recentlyCompletedIds.has(g.id));
 
+  // The first 3 are the "main" daily goals; the 4th and 5th spill over into
+  // two separate side-goal slots, kept visually distinct from the main 3.
+  const MAIN_CAPACITY = 3;
+  const SIDE_CAPACITY = 2;
+  const TOTAL_CAPACITY = MAIN_CAPACITY + SIDE_CAPACITY;
+  const visibleMainGoals = visibleGoals.slice(0, MAIN_CAPACITY);
+  const visibleSideGoals = visibleGoals.slice(MAIN_CAPACITY, TOTAL_CAPACITY);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    if (goals.length >= 3) {
-      setErrorMessage('شما قبلاً ۳ هدف روزانه را ثبت کرده‌اید. برای حفظ تمرکز، حداکثر ۳ هدف مجاز است.');
+    if (goals.length >= TOTAL_CAPACITY) {
+      setErrorMessage('شما قبلاً ۳ هدف اصلی و ۲ هدف جانبی امروز را ثبت کرده‌اید. برای حفظ تمرکز، بیشتر از این مجاز نیست.');
       setTimeout(() => setErrorMessage(null), 4000);
       return;
     }
@@ -106,26 +116,26 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
           >
             <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider">
               <Target className="w-4 h-4 shrink-0" />
-              <span>قانون ۳ هدف روزانه</span>
+              <span>قانون ۳ هدف اصلی + ۲ هدف جانبی</span>
             </div>
             <ChevronDown
               className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-                isHeaderOpen ? 'rotate-180' : ''
+                isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
               }`}
             />
           </button>
 
-          {goals.length < 3 ? (
+          {goals.length < TOTAL_CAPACITY ? (
             <button
               onClick={() => setShowModal(true)}
               className="py-3 px-5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl flex items-center gap-2 shadow-md shadow-orange-500/20 transition-all shrink-0"
             >
               <Plus className="w-5 h-5" />
-              <span>افزودن هدف جديد ({3 - goals.length} ظرفیت)</span>
+              <span>افزودن هدف جديد ({TOTAL_CAPACITY - goals.length} ظرفیت)</span>
             </button>
           ) : (
             <div className="px-4 py-2 bg-amber-50 text-amber-800 rounded-2xl text-xs font-bold border border-amber-200/80 shrink-0">
-              ظرفیت ۳ هدف امروز تکمیل شد ✨
+              ظرفیت امروز (۳ اصلی + ۲ جانبی) تکمیل شد ✨
             </div>
           )}
         </div>
@@ -133,10 +143,10 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
         {isHeaderOpen && (
           <div className="px-6 pb-6 -mt-1">
             <h2 className="text-2xl font-extrabold text-slate-800">
-              سه هدف مهم امروز
+              سه هدف مهم امروز، به‌علاوه دو هدف جانبی
             </h2>
             <p className="text-slate-500 text-sm mt-1">
-              مغز افراد ADHD در مواجهه با فهرست‌های طولانی فلج می‌شود. فقط ۳ کار کلیدی انتخاب کنید.
+              مغز افراد ADHD در مواجهه با فهرست‌های طولانی فلج می‌شود. ۳ کار کلیدی انتخاب کنید؛ در صورت نیاز، ۲ هدف جانبی هم می‌توانید اضافه کنید.
             </p>
           </div>
         )}
@@ -161,8 +171,8 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
       {visibleGoals.length === 0 && goals.length > 0 ? (
         <div className="bg-emerald-50/60 rounded-[28px] border-2 border-dashed border-emerald-200 p-12 text-center flex flex-col items-center justify-center space-y-2">
           <span className="text-4xl">🎉</span>
-          <h3 className="text-lg font-bold text-emerald-800">هر ۳ هدف امروزت رو کامل کردی!</h3>
-          <p className="text-emerald-700 text-xs">فردا با ۳ هدف جدید ادامه میدیم.</p>
+          <h3 className="text-lg font-bold text-emerald-800">همه‌ی اهداف امروزت رو کامل کردی!</h3>
+          <p className="text-emerald-700 text-xs">فردا با اهداف جدید ادامه میدیم.</p>
         </div>
       ) : visibleGoals.length === 0 ? (
         <div className="bg-white rounded-[28px] border-2 border-dashed border-slate-200 p-12 text-center flex flex-col items-center justify-center space-y-4">
@@ -184,81 +194,155 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {visibleGoals.map((goal, idx) => (
-            <div
-              key={goal.id}
-              className={`rounded-[28px] p-6 border transition-all flex flex-col justify-between relative ${
-                goal.completed
-                  ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 shadow-xs'
-                  : 'bg-white border-slate-200/80 shadow-xs hover:border-orange-300'
-              }`}
-            >
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-extrabold text-xs flex items-center justify-center">
-                    #{idx + 1}
-                  </span>
-                  <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${
-                    goal.importance === 'high'
-                      ? 'bg-rose-100 text-rose-700'
-                      : goal.importance === 'medium'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {goal.importance === 'high' ? 'ضروری' : goal.importance === 'medium' ? 'اهمیت متوسط' : 'عادی'}
-                  </span>
+        <>
+          {/* Main 3 goals */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {visibleMainGoals.map((goal, idx) => (
+              <div
+                key={goal.id}
+                className={`rounded-[28px] p-6 border transition-all flex flex-col justify-between relative ${
+                  goal.completed
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 shadow-xs'
+                    : 'bg-white border-slate-200/80 shadow-xs hover:border-orange-300'
+                }`}
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-extrabold text-xs flex items-center justify-center">
+                      #{idx + 1}
+                    </span>
+                    <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${
+                      goal.importance === 'high'
+                        ? 'bg-rose-100 text-rose-700'
+                        : goal.importance === 'medium'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {goal.importance === 'high' ? 'ضروری' : goal.importance === 'medium' ? 'اهمیت متوسط' : 'عادی'}
+                    </span>
+                  </div>
+
+                  <h3 className={`text-base font-bold mb-2 ${goal.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                    {goal.title}
+                  </h3>
+
+                  <div className="flex items-center gap-2 text-xs text-slate-400 font-medium mb-6">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>تخمین زمان: {goal.approxTimeMinutes} دقیقه</span>
+                  </div>
                 </div>
 
-                <h3 className={`text-base font-bold mb-2 ${goal.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                  {goal.title}
-                </h3>
+                <div className="pt-4 border-t border-slate-100/80 flex items-center justify-between">
+                  <button
+                    onClick={() => handleToggle(goal.id, goal.completed)}
+                    className={`py-2 px-4 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                      goal.completed
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-800 hover:bg-slate-700 text-white'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{goal.completed ? 'انجام شد ✓' : 'علامت به عنوان انجام‌شده'}</span>
+                  </button>
 
-                <div className="flex items-center gap-2 text-xs text-slate-400 font-medium mb-6">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>تخمین زمان: {goal.approxTimeMinutes} دقیقه</span>
+                  <button
+                    onClick={() => onDeleteGoal(goal.id)}
+                    className="p-2 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
+                    title="حذف هدف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+            ))}
 
-              <div className="pt-4 border-t border-slate-100/80 flex items-center justify-between">
-                <button
-                  onClick={() => handleToggle(goal.id, goal.completed)}
-                  className={`py-2 px-4 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            {/* Placeholder slots for the main 3 */}
+            {Array.from({ length: MAIN_CAPACITY - Math.min(goals.length, MAIN_CAPACITY) }).map((_, i) => (
+              <div
+                key={i}
+                onClick={() => setShowModal(true)}
+                className="rounded-[28px] border-2 border-dashed border-slate-200/80 p-6 flex flex-col items-center justify-center text-center space-y-2 cursor-pointer hover:border-orange-300 hover:bg-orange-50/20 transition-all min-h-[200px]"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold">
+                  +
+                </div>
+                <p className="text-xs font-bold text-slate-500">ظرفیت خالی هدف #{Math.min(goals.length, MAIN_CAPACITY) + i + 1}</p>
+                <p className="text-[11px] text-slate-400">برای افزودن کلیک کنید</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Side goals — only available once the 3 main goals are set, kept
+              visually distinct (smaller, dashed indigo accent) from the main 3. */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-indigo-500 font-bold text-[11px] uppercase tracking-wider px-1">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>دو هدف جانبی (اختیاری)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {visibleSideGoals.map((goal, idx) => (
+                <div
+                  key={goal.id}
+                  className={`rounded-2xl p-4 border transition-all flex items-center justify-between gap-3 ${
                     goal.completed
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-slate-800 hover:bg-slate-700 text-white'
+                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                      : 'bg-indigo-50/40 border-indigo-100 hover:border-indigo-300'
                   }`}
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{goal.completed ? 'انجام شد ✓' : 'علامت به عنوان انجام‌شده'}</span>
-                </button>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-indigo-500">دسته جانبی {idx + 1}</span>
+                    <h4 className={`text-sm font-bold truncate ${goal.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                      {goal.title}
+                    </h4>
+                    <span className="text-[11px] text-slate-400">{goal.approxTimeMinutes} دقیقه</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleToggle(goal.id, goal.completed)}
+                      className={`p-2 rounded-xl transition-all ${
+                        goal.completed ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                      }`}
+                      title="علامت به عنوان انجام‌شده"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteGoal(goal.id)}
+                      className="p-2 text-slate-300 hover:text-rose-500 rounded-xl hover:bg-rose-50 transition-colors"
+                      title="حذف هدف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-                <button
-                  onClick={() => onDeleteGoal(goal.id)}
-                  className="p-2 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
-                  title="حذف هدف"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Side placeholders — only offered once all 3 main goals exist */}
+              {Array.from({ length: SIDE_CAPACITY - Math.max(0, Math.min(goals.length, TOTAL_CAPACITY) - MAIN_CAPACITY) }).map((_, i) => {
+                const mainFull = goals.length >= MAIN_CAPACITY;
+                const slotNumber = Math.max(0, goals.length - MAIN_CAPACITY) + i + 1;
+                return (
+                  <div
+                    key={i}
+                    onClick={() => mainFull && setShowModal(true)}
+                    className={`rounded-2xl border-2 border-dashed p-4 flex items-center gap-3 min-h-[64px] transition-all ${
+                      mainFull
+                        ? 'border-indigo-200 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30'
+                        : 'border-slate-100 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
+                      +
+                    </div>
+                    <p className="text-xs font-bold text-slate-500">
+                      {mainFull ? `دسته جانبی ${slotNumber} خالی است` : 'ابتدا ۳ هدف اصلی را تکمیل کنید'}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-
-          {/* Placeholder slots if less than 3 */}
-          {Array.from({ length: 3 - goals.length }).map((_, i) => (
-            <div
-              key={i}
-              onClick={() => setShowModal(true)}
-              className="rounded-[28px] border-2 border-dashed border-slate-200/80 p-6 flex flex-col items-center justify-center text-center space-y-2 cursor-pointer hover:border-orange-300 hover:bg-orange-50/20 transition-all min-h-[200px]"
-            >
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold">
-                +
-              </div>
-              <p className="text-xs font-bold text-slate-500">ظرفیت خالی هدف #{goals.length + i + 1}</p>
-              <p className="text-[11px] text-slate-400">برای افزودن کلیک کنید</p>
-            </div>
-          ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Add Goal Modal */}

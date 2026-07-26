@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { User, Lock, Moon, Sun, Save, Bell, Camera, Check, ShieldCheck, Sparkles, Target, RotateCcw, Award, ChevronDown } from 'lucide-react';
 import { UserProfile, NotificationSettings, PinSettings } from '../types';
 
@@ -32,6 +33,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   // PIN settings state
   const [pinEnabled, setPinEnabled] = useState(pinSettings.enabled);
@@ -163,7 +165,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
             </div>
             <ChevronDown
               className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
-                isHeaderOpen ? 'rotate-180' : ''
+                isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
               }`}
             />
           </button>

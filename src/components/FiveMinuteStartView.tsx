@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAccordionHint } from '../utils/hint';
 import { Zap, Play, Pause, RotateCcw, CheckCircle2, Sparkles, HeartHandshake, ChevronDown } from 'lucide-react';
 import { playCompletionChime, playMicroChime } from '../utils/audio';
 
@@ -18,6 +19,7 @@ export const FiveMinuteStartView: React.FC<FiveMinuteStartViewProps> = ({
   // Header starts collapsed to just its small label — tapping the chevron
   // slides it open to show the full heading/description.
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
+  const showHint = useAccordionHint();
 
   const showMsg = (m: string) => {
     setMsg(m);
@@ -85,7 +87,7 @@ export const FiveMinuteStartView: React.FC<FiveMinuteStartViewProps> = ({
           </div>
           <ChevronDown
             className={`w-5 h-5 text-amber-400 shrink-0 transition-transform duration-300 ${
-              isHeaderOpen ? 'rotate-180' : ''
+              isHeaderOpen ? 'rotate-180' : showHint ? 'animate-chevron-hint' : ''
             }`}
           />
         </button>

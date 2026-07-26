@@ -57,7 +57,7 @@ import {
   getStoredSleepLogs,
   saveSleepLog,
   getStoredGamification,
-  addPointsAndCoins,
+  recordToolUsage,
   resetGamification,
   getStoredNotifications,
   saveNotifications,
@@ -297,7 +297,8 @@ export default function App() {
       if (g.id === id) {
         const nextState = !g.completed;
         if (nextState) {
-          const updatedGam = addPointsAndCoins(15, 5);
+          // Grows the tree and counts toward the "اولین هدف" badge (3 goals).
+          const updatedGam = recordToolUsage('goals', 15, 5);
           setGamification(updatedGam);
         }
         return {
@@ -333,7 +334,9 @@ export default function App() {
     const updated = [newTask, ...decomposedTasks];
     setDecomposedTasks(updated);
     saveTaskDecomposed(updated);
-    const updatedGam = addPointsAndCoins(20, 5);
+    // Grows the tree, earns coins, and counts toward the "غول‌کش کارهای
+    // بزرگ" badge (3 uses) — the Task Decomposer is the only coin source.
+    const updatedGam = recordToolUsage('decomposer', 20, 5);
     setGamification(updatedGam);
   };
 
@@ -346,7 +349,8 @@ export default function App() {
             if (st.id === subtaskId) {
               const nextVal = !st.completed;
               if (nextVal) {
-                const updatedGam = addPointsAndCoins(5, 2);
+                // Also part of the Task Decomposer tool → same badge/coins.
+                const updatedGam = recordToolUsage('decomposer', 5, 2);
                 setGamification(updatedGam);
               }
               return { ...st, completed: nextVal };
@@ -581,8 +585,6 @@ export default function App() {
         focusIsRunning={focusIsRunning}
         focusTimeLeftSeconds={focusTimeLeftSeconds}
         focusTaskTitle={focusTaskTitle}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
       />
 
       {/* Daily motivational message, right under the header */}
