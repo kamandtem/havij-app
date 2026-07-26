@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Sun, Plus, Star, ShieldCheck, Sparkles } from 'lucide-react';
+import { Moon, Sun, Plus, Star, ShieldCheck, Sparkles, ChevronDown } from 'lucide-react';
 import { SleepLog } from '../types';
 import { getTodayDateString } from '../utils/storage';
 
@@ -19,6 +19,9 @@ export const SleepTrackerView: React.FC<SleepTrackerViewProps> = ({
   const [notes, setNotes] = useState('');
 
   const [savedMsg, setSavedMsg] = useState(false);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,20 +65,34 @@ export const SleepTrackerView: React.FC<SleepTrackerViewProps> = ({
           اطلاعات خواب با موفقیت ثبت شد! 🌙
         </div>
       )}
-      {/* Header */}
-      <div className="bg-slate-900 rounded-[28px] border border-slate-800 p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider mb-1">
-            <Moon className="w-4 h-4" />
-            <span>تنظیم ریتم شبانه‌روزی (Circadian Rhythm)</span>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-slate-900 rounded-[28px] border border-slate-800 text-white shadow-md overflow-hidden">
+        <button
+          onClick={() => setIsHeaderOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 p-6 text-right"
+        >
+          <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider">
+            <Moon className="w-4 h-4 shrink-0" />
+            <span>تنظیم ریتم شبانه‌روزی</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-white">
-            مدیریت و ردیابی خواب ADHD
-          </h2>
-          <p className="text-slate-300 text-sm mt-1">
-            خواب باکیفیت مستقیم‌ترین تاثیر را روی قدرت تمرکز و کنترل تکانه فردا دارد.
-          </p>
-        </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+              isHeaderOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-white">
+              مدیریت و ردیابی خواب ADHD
+            </h2>
+            <p className="text-slate-300 text-sm mt-1">
+              خواب باکیفیت مستقیم‌ترین تاثیر را روی قدرت تمرکز و کنترل تکانه فردا دارد.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, Play, Pause, RotateCcw, CheckCircle2, Sparkles, HeartHandshake } from 'lucide-react';
+import { Zap, Play, Pause, RotateCcw, CheckCircle2, Sparkles, HeartHandshake, ChevronDown } from 'lucide-react';
 import { playCompletionChime, playMicroChime } from '../utils/audio';
 
 interface FiveMinuteStartViewProps {
@@ -15,6 +15,9 @@ export const FiveMinuteStartView: React.FC<FiveMinuteStartViewProps> = ({
   const timerRef = useRef<number | null>(null);
 
   const [msg, setMsg] = useState<string | null>(null);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   const showMsg = (m: string) => {
     setMsg(m);
@@ -69,19 +72,34 @@ export const FiveMinuteStartView: React.FC<FiveMinuteStartViewProps> = ({
           <span>{msg}</span>
         </div>
       )}
-      <div className="bg-amber-50 rounded-[28px] border border-amber-200/80 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-amber-700 font-bold text-xs uppercase tracking-wider mb-1">
-            <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
-            <span>تکنیک ۵ دقيقه طلایی (Micro-Start Strategy)</span>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-amber-50 rounded-[28px] border border-amber-200/80 shadow-xs overflow-hidden">
+        <button
+          onClick={() => setIsHeaderOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 p-6 text-right"
+        >
+          <div className="flex items-center gap-2 text-amber-700 font-bold text-xs uppercase tracking-wider">
+            <Zap className="w-4 h-4 fill-amber-500 text-amber-500 shrink-0" />
+            <span>تکنیک ۵ دقيقه طلایی</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-amber-950">
-            ابزار اختصاصی شکستن اهمال‌کاری
-          </h2>
-          <p className="text-amber-800 text-sm mt-1">
-            با خودتان پیمان ببندید: «من فقط و فقط ۵ دقیقه روی این کار وقت می‌گذارم. اگر بعد از ۵ دقیقه نخواستم، حق دارم کار را رها کنم!»
-          </p>
-        </div>
+          <ChevronDown
+            className={`w-5 h-5 text-amber-400 shrink-0 transition-transform duration-300 ${
+              isHeaderOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-amber-950">
+              ابزار اختصاصی شکستن اهمال‌کاری
+            </h2>
+            <p className="text-amber-800 text-sm mt-1">
+              با خودتان پیمان ببندید: «من فقط و فقط ۵ دقیقه روی این کار وقت می‌گذارم. اگر بعد از ۵ دقیقه نخواستم، حق دارم کار را رها کنم!»
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="max-w-2xl mx-auto bg-white rounded-[28px] border border-slate-200/80 p-8 shadow-xs space-y-6 text-center">

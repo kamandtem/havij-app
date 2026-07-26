@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, CheckCircle2, Sparkles, Target } from 'lucide-react';
-import { startAmbientNoise, stopAmbientNoise } from '../utils/audio';
+import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, CheckCircle2, Sparkles, Target, ChevronDown } from 'lucide-react';
+import { startAmbientNoise, stopAmbientNoise, playMicroChime } from '../utils/audio';
 
 interface FocusModeViewProps {
   selectedMinutes: number;
@@ -27,6 +27,9 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
 }) => {
   const [ambientSound, setAmbientSound] = useState<'off' | 'white' | 'brown' | 'rain'>('off');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -36,6 +39,13 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
   const handleAmbientChange = (type: 'off' | 'white' | 'brown' | 'rain') => {
     setAmbientSound(type);
     startAmbientNoise(type);
+  };
+
+  // Play the same short chime used on the 5-minute-start button whenever
+  // the user taps this Pomodoro timer's play/pause control.
+  const handleTogglePlay = () => {
+    playMicroChime();
+    onTogglePlay();
   };
 
   useEffect(() => {
@@ -58,20 +68,34 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider mb-1">
-            <Timer className="w-4 h-4" />
-            <span>حالت تمرکز عمیق (Focus Mode)</span>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-xs overflow-hidden">
+        <button
+          onClick={() => setIsHeaderOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 p-6 text-right"
+        >
+          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider">
+            <Timer className="w-4 h-4 shrink-0" />
+            <span>حالت تمرکز عمیق</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-800">
-            تایمر و محیط تمرکز بدون حواس‌پرتی
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            یک کار را انتخاب کنید، تایمر را روشن کنید و صداهای نویز سفید/قهوه‌ای را برای حذف صداهای محیطی بگذارید. این تایمر با ویجت پومودورو در داشبورد هماهنگ است و حتی با تغییر تب هم ادامه می‌یابد.
-          </p>
-        </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+              isHeaderOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-slate-800">
+              تایمر و محیط تمرکز بدون حواس‌پرتی
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              یک کار را انتخاب کنید، تایمر را روشن کنید و صداهای نویز سفید/قهوه‌ای را برای حذف صداهای محیطی بگذارید. این تایمر با ویجت پومودورو در داشبورد هماهنگ است و حتی با تغییر تب هم ادامه می‌یابد.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -140,10 +164,10 @@ export const FocusModeView: React.FC<FocusModeViewProps> = ({
             </button>
 
             <button
-              onClick={onTogglePlay}
+              onClick={handleTogglePlay}
               className={`py-4 px-10 rounded-2xl font-extrabold text-base text-white shadow-lg transition-all flex items-center gap-2 ${
                 isRunning
-                  ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                  ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20'
                   : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20'
               }`}
             >

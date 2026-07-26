@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, Sun, Moon } from 'lucide-react';
 import { DailyGoal, DailyLog, SleepLog } from '../types';
 import { NotificationBell } from './NotificationBell';
 
@@ -13,6 +13,8 @@ interface NavbarProps {
   focusIsRunning: boolean;
   focusTimeLeftSeconds: number;
   focusTaskTitle: string;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -24,7 +26,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   sleepLogs,
   focusIsRunning,
   focusTimeLeftSeconds,
-  focusTaskTitle
+  focusTaskTitle,
+  theme,
+  onToggleTheme
 }) => {
   return (
     // Soft gradient zone behind the floating header — it doesn't touch the
@@ -36,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenDrawer}
-            className="p-2.5 rounded-2xl bg-orange-50 dark:bg-slate-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-slate-700 transition-all border border-orange-200 dark:border-slate-700 flex items-center justify-center shadow-xs"
+            className="p-3 rounded-2xl bg-orange-50 dark:bg-slate-800 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-slate-700 transition-all border border-orange-200 dark:border-slate-700 flex items-center justify-center shadow-xs"
             title="منوی برنامه‌ریز هویج"
           >
             <Menu className="w-5 h-5 stroke-[2.5]" />
@@ -46,24 +50,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer select-none"
           >
-            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/80 border-2 border-orange-300 dark:border-orange-500 rounded-2xl flex items-center justify-center shadow-xs text-xl">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/80 border-2 border-orange-300 dark:border-orange-500 rounded-2xl flex items-center justify-center shadow-xs text-2xl">
               🥕
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">
+              <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
                 هویج
               </h1>
-              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 hidden sm:block">
+              <p className="text-xs font-bold text-orange-600 dark:text-orange-400 hidden sm:block">
                 دستیار تمرکز و برنامه‌ریز ADHD
               </p>
             </div>
           </div>
         </div>
 
-        {/* Left Side (RTL end): Reminders Bell */}
-        <div className="flex items-center gap-2">
-          {/* Reminders (replaces the old profile shortcut — profile now lives in the menu.
-              Theme toggle also moved out — it now lives in Profile & Settings.) */}
+        {/* Left Side (RTL end): Theme toggle + Reminders Bell */}
+        <div className="flex items-center gap-2.5">
+          {/* Day/Night theme toggle */}
+          <button
+            onClick={onToggleTheme}
+            className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-amber-500 dark:text-indigo-300 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors"
+            title={theme === 'dark' ? 'حالت روز' : 'حالت شب'}
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+
+          {/* Reminders */}
           <NotificationBell
             dailyGoals={dailyGoals}
             dailyLogs={dailyLogs}

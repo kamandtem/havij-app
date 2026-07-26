@@ -27,6 +27,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [endTime, setEndTime] = useState('10:00');
   const [category, setCategory] = useState<'work' | 'rest' | 'health' | 'routine'>('work');
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
   const categoryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,20 +53,34 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Header */}
-      <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider mb-1">
-            <Calendar className="w-4 h-4" />
-            <span>مدیریت زمان دیداری (Time Blocking)</span>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-xs overflow-hidden">
+        <button
+          onClick={() => setIsHeaderOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 p-6 text-right"
+        >
+          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider">
+            <Calendar className="w-4 h-4 shrink-0" />
+            <span>مدیریت زمان دیداری</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-800">
-            برنامه زمانی روزانه (Timeline)
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            زمان‌های کاری و استراحت خود را در بلوک‌های مشخص قرار دهید تا از سردرگمی جلوگیری شود.
-          </p>
-        </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+              isHeaderOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-slate-800">
+              برنامه زمانی روزانه
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              زمان‌های کاری و استراحت خود را در بلوک‌های مشخص قرار دهید تا از سردرگمی جلوگیری شود.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Add Time Block Form */}

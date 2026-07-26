@@ -104,6 +104,13 @@ export interface NotificationSettings {
   wakeReminderEnabled?: boolean;
 }
 
+export interface JournalNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -117,6 +124,6 @@ export interface Article {
       body: string;
       bulletPoints?: string[];
     }[];
-    actionableTip: string;
+    actionableTips: string[];
   };
 }

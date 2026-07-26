@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scissors, Plus, CheckCircle2, Trash2, ArrowRight, Sparkles } from 'lucide-react';
+import { Scissors, Plus, CheckCircle2, Trash2, ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
 import { TaskDecomposed } from '../types';
 
 interface TaskDecomposerViewProps {
@@ -20,6 +20,9 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
   const [taskTitle, setTaskTitle] = useState('');
   const [subtaskInputs, setSubtaskInputs] = useState<string[]>(['', '']);
   const [newSubtaskTextMap, setNewSubtaskTextMap] = useState<Record<string, string>>({});
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   const handleAddSubtaskInput = () => {
     setSubtaskInputs([...subtaskInputs, '']);
@@ -42,20 +45,34 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Header */}
-      <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider mb-1">
-            <Scissors className="w-4 h-4" />
-            <span>ابزار ضد فلج تحریکی (Task Decomposer)</span>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-xs overflow-hidden">
+        <button
+          onClick={() => setIsHeaderOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-3 p-6 text-right"
+        >
+          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider">
+            <Scissors className="w-4 h-4 shrink-0" />
+            <span>ابزار ضد فلج تحریکی</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-800">
-            خردکننده کارهای بزرگ
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            کارهای بزرگ مغز ADHD را وحشت‌زده می‌کنند. آن‌ها را به قدم‌های کوچک ۵ دقیقه‌ای خرد کنید.
-          </p>
-        </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+              isHeaderOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-slate-800">
+              خردکننده کارهای بزرگ
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              کارهای بزرگ مغز ADHD را وحشت‌زده می‌کنند. آن‌ها را به قدم‌های کوچک ۵ دقیقه‌ای خرد کنید.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* New Task Creator Form */}

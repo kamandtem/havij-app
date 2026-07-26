@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Plus, CheckCircle2, Trash2, Clock, AlertCircle, Sparkles } from 'lucide-react';
+import { Target, Plus, CheckCircle2, Trash2, Clock, AlertCircle, Sparkles, ChevronDown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { DailyGoal } from '../types';
 
@@ -23,6 +23,9 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
   const [praiseMessage, setPraiseMessage] = useState<string | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   // Goals that were just ticked stay visible briefly (for the celebration),
   // then get removed from the panel per the "cleared once completed" rule.
@@ -93,32 +96,48 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Top Banner */}
-      <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider mb-1">
-            <Target className="w-4 h-4" />
-            <span>قانون ۳ هدف روزانه (Rule of 3)</span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-slate-800">
-            سه هدف مهم امروز
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            مغز افراد ADHD در مواجهه با فهرست‌های طولانی فلج می‌شود. فقط ۳ کار کلیدی انتخاب کنید.
-          </p>
+      {/* Top Banner — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6">
+          <button
+            onClick={() => setIsHeaderOpen((o) => !o)}
+            className="flex-1 w-full sm:w-auto flex items-center justify-between gap-3 text-right"
+          >
+            <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider">
+              <Target className="w-4 h-4 shrink-0" />
+              <span>قانون ۳ هدف روزانه</span>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+                isHeaderOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {goals.length < 3 ? (
+            <button
+              onClick={() => setShowModal(true)}
+              className="py-3 px-5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl flex items-center gap-2 shadow-md shadow-orange-500/20 transition-all shrink-0"
+            >
+              <Plus className="w-5 h-5" />
+              <span>افزودن هدف جديد ({3 - goals.length} ظرفیت)</span>
+            </button>
+          ) : (
+            <div className="px-4 py-2 bg-amber-50 text-amber-800 rounded-2xl text-xs font-bold border border-amber-200/80 shrink-0">
+              ظرفیت ۳ هدف امروز تکمیل شد ✨
+            </div>
+          )}
         </div>
 
-        {goals.length < 3 ? (
-          <button
-            onClick={() => setShowModal(true)}
-            className="py-3 px-5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl flex items-center gap-2 shadow-md shadow-orange-500/20 transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            <span>افزودن هدف جديد ({3 - goals.length} ظرفیت)</span>
-          </button>
-        ) : (
-          <div className="px-4 py-2 bg-amber-50 text-amber-800 rounded-2xl text-xs font-bold border border-amber-200/80">
-            ظرفیت ۳ هدف امروز تکمیل شد ✨
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-extrabold text-slate-800">
+              سه هدف مهم امروز
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              مغز افراد ADHD در مواجهه با فهرست‌های طولانی فلج می‌شود. فقط ۳ کار کلیدی انتخاب کنید.
+            </p>
           </div>
         )}
       </div>

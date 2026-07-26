@@ -97,10 +97,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     <div className="relative">
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="relative p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 transition-colors"
+        className="relative p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 transition-colors"
         title="یادآوری‌ها"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-5 h-5" />
         {reminders.length > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900">
             {reminders.length > 9 ? '9+' : reminders.length}

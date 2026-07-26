@@ -16,6 +16,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { UserProfile, DailyGoal, GamificationData } from '../types';
+import { playMicroChime } from '../utils/audio';
 
 interface DashboardViewProps {
   userProfile: UserProfile | null;
@@ -45,6 +46,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const focusMinutesDisplay = String(Math.floor(focusTimeLeftSeconds / 60)).padStart(2, '0');
   const focusSecondsDisplay = String(focusTimeLeftSeconds % 60).padStart(2, '0');
+
+  // Play the same short chime used on the 5-minute-start button whenever
+  // the user taps the Pomodoro widget's play/pause control.
+  const handlePomodoroToggle = () => {
+    playMicroChime();
+    onToggleFocusTimer();
+  };
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -93,11 +101,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="w-full max-w-xs flex gap-2.5">
             <button
-              onClick={onToggleFocusTimer}
+              onClick={handlePomodoroToggle}
               className={`flex-1 py-3.5 px-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
                 focusIsRunning
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                  : 'bg-slate-800 hover:bg-slate-700 text-white shadow-slate-200'
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
               }`}
             >
               <Play className="w-4 h-4 fill-current" />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
-import { syncScheduledNotifications } from './utils/notifications';
+import { syncScheduledNotifications, ensureReminderChannel, REMINDER_CHANNEL_ID } from './utils/notifications';
 import { playCompletionChime } from './utils/audio';
 import { Navbar } from './components/Navbar';
 import { MotivationalBanner } from './components/MotivationalBanner';
@@ -109,25 +109,18 @@ export default function App() {
     saveTheme(nextTheme);
   };
 
-  // Navigation history stack, so the back button returns to whatever
-  // screen the user was actually on before, not always the dashboard.
-  const historyStackRef = useRef<string[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const navigateTo = (tab: string) => {
-    setActiveTab((current) => {
-      if (tab !== current) {
-        historyStackRef.current.push(current);
-      }
-      return tab;
-    });
+    setActiveTab(tab);
   };
 
   // Hardware Back Button (Android):
   // 1) close drawer if open
-  // 2) go back one screen in history if there is one (single press = previous panel)
-  // 3) if already at the root screen with nowhere left to go, ask for confirmation
-  //    (Yes/No) before exiting, instead of a silent double-press timer.
+  // 2) single press: always go straight to the Home tab (not to whichever
+  //    panel was visited before it — that was the old, confusing behavior)
+  // 3) pressed again while already on Home: ask for confirmation (Yes/No)
+  //    before exiting, instead of leaving the app immediately.
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('backButton', () => {
       if (showExitConfirm) {
@@ -140,9 +133,8 @@ export default function App() {
         return;
       }
 
-      if (historyStackRef.current.length > 0) {
-        const previousTab = historyStackRef.current.pop() as string;
-        setActiveTab(previousTab);
+      if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
         return;
       }
 
@@ -152,7 +144,7 @@ export default function App() {
     return () => {
       listenerPromise.then((listener) => listener.remove());
     };
-  }, [isDrawerOpen, showExitConfirm]);
+  }, [isDrawerOpen, showExitConfirm, activeTab]);
 
   // Re-lock the PIN screen whenever the app returns from the background,
   // so the PIN lock actually protects the app instead of only applying
@@ -202,13 +194,16 @@ export default function App() {
   const scheduleFocusNotification = async (secondsLeft: number) => {
     if (!Capacitor.isNativePlatform()) return;
     try {
+      await ensureReminderChannel();
       await LocalNotifications.cancel({ notifications: [{ id: FOCUS_NOTIF_ID }] });
       await LocalNotifications.schedule({
         notifications: [{
           id: FOCUS_NOTIF_ID,
           title: 'هویج 🥕',
           body: 'جلسه تمرکزت تموم شد! وقت یک استراحت کوتاهه.',
-          schedule: { at: new Date(Date.now() + secondsLeft * 1000) }
+          schedule: { at: new Date(Date.now() + secondsLeft * 1000) },
+          channelId: REMINDER_CHANNEL_ID,
+          sound: notificationSettings.sound ? 'default' : undefined
         }]
       });
     } catch {
@@ -586,6 +581,8 @@ export default function App() {
         focusIsRunning={focusIsRunning}
         focusTimeLeftSeconds={focusTimeLeftSeconds}
         focusTaskTitle={focusTaskTitle}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Daily motivational message, right under the header */}

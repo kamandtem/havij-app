@@ -9,7 +9,8 @@ import {
   SleepLog,
   GamificationData,
   NotificationSettings,
-  PinSettings
+  PinSettings,
+  JournalNote
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -24,7 +25,9 @@ const STORAGE_KEYS = {
   GAMIFICATION: 'zehnaram_gamification',
   NOTIFICATIONS: 'zehnaram_notifications',
   PIN_SETTINGS: 'havij_pin_settings',
-  THEME: 'havij_theme'
+  THEME: 'havij_theme',
+  JOURNAL_NOTES: 'havij_journal_notes',
+  GARDEN_GUIDE_SEEN: 'havij_garden_guide_seen'
 };
 
 // Formats a Date using LOCAL (device) date components, not UTC.
@@ -253,6 +256,27 @@ export function resetGamification(): GamificationData {
   };
   saveGamification(initialData);
   return initialData;
+}
+
+// Journal Notes (free-form notes opened from the "+" button in the bottom nav)
+export function getStoredJournalNotes(): JournalNote[] {
+  const raw = localStorage.getItem(STORAGE_KEYS.JOURNAL_NOTES);
+  return raw ? JSON.parse(raw) : [];
+}
+
+export function saveJournalNotes(notes: JournalNote[]): void {
+  localStorage.setItem(STORAGE_KEYS.JOURNAL_NOTES, JSON.stringify(notes));
+}
+
+// Whether the user has already dismissed the "how does the Motivation
+// Garden work" first-time guide — shown once, then never again unless
+// they clear the app's storage.
+export function getGardenGuideSeen(): boolean {
+  return localStorage.getItem(STORAGE_KEYS.GARDEN_GUIDE_SEEN) === 'true';
+}
+
+export function setGardenGuideSeen(): void {
+  localStorage.setItem(STORAGE_KEYS.GARDEN_GUIDE_SEEN, 'true');
 }
 
 // Notifications

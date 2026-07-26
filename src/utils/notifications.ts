@@ -8,6 +8,29 @@ const NOTIF_ID_GOALS = 1001;
 const NOTIF_ID_SLEEP = 1002;
 const NOTIF_ID_WAKE = 1003;
 
+// Android requires notifications to belong to a channel that has sound and
+// vibration explicitly turned on — without this, reminders were arriving
+// silently with no vibration even though the "sound" setting was on.
+export const REMINDER_CHANNEL_ID = 'havij_reminders';
+
+export async function ensureReminderChannel(): Promise<void> {
+  if (Capacitor.getPlatform() !== 'android') return;
+  try {
+    await LocalNotifications.createChannel({
+      id: REMINDER_CHANNEL_ID,
+      name: 'یادآوری‌های هویج',
+      description: 'یادآوری اهداف روزانه، خواب و بیداری',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+      lights: true
+    });
+  } catch {
+    // ignore — channel may already exist
+  }
+}
+
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
   try {
@@ -33,6 +56,8 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
   const granted = await requestNotificationPermissions();
   if (!granted) return;
 
+  await ensureReminderChannel();
+
   // Always clear the three known reminder IDs first so toggling a
   // reminder off (or changing its time) doesn't leave stale schedules.
   try {
@@ -53,7 +78,9 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
       id: NOTIF_ID_GOALS,
       title: 'هویج 🥕',
       body: 'صبح بخیر! امروز سه کار مهمت چیه؟ همین الان ثبتشون کن.',
-      schedule: { on: { hour, minute }, allowWhileIdle: true }
+      schedule: { on: { hour, minute }, allowWhileIdle: true },
+      channelId: REMINDER_CHANNEL_ID,
+      sound: settings.sound ? 'default' : undefined
     });
   }
 
@@ -63,7 +90,9 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
       id: NOTIF_ID_SLEEP,
       title: 'هویج 🥕',
       body: 'وقت خوابه! برای داشتن یک ذهن آروم‌تر فردا، الان بخواب.',
-      schedule: { on: { hour, minute }, allowWhileIdle: true }
+      schedule: { on: { hour, minute }, allowWhileIdle: true },
+      channelId: REMINDER_CHANNEL_ID,
+      sound: settings.sound ? 'default' : undefined
     });
   }
 
@@ -73,7 +102,9 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
       id: NOTIF_ID_WAKE,
       title: 'هویج 🥕',
       body: 'صبح بخیر! زمان بیداریته — یک لیوان آب بنوش و روز رو شروع کن.',
-      schedule: { on: { hour, minute }, allowWhileIdle: true }
+      schedule: { on: { hour, minute }, allowWhileIdle: true },
+      channelId: REMINDER_CHANNEL_ID,
+      sound: settings.sound ? 'default' : undefined
     });
   }
 

@@ -215,10 +215,10 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
         </div>
 
         {/* Navigation Sections */}
-        <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col gap-5 border-t border-slate-100 dark:border-slate-800 pt-3">
           {/* Main Category */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1 block">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1.5 block">
               بخش‌های اصلی
             </span>
             {mainItems.map((item) => {
@@ -228,13 +228,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -242,8 +242,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           </div>
 
           {/* Planning Category */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1 block">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1.5 block">
               برنامه‌ریزی و ارزیابی
             </span>
             {planningItems.map((item) => {
@@ -253,13 +253,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -267,8 +267,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           </div>
 
           {/* Motivation & Learning Category */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1 block">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider px-3 mb-1.5 block">
               انگیزه و روانشناسی
             </span>
             {learningItems.map((item) => {
@@ -278,13 +278,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all text-right ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all text-right ${
                     isActive
                       ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </button>
               );

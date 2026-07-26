@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { User, Lock, Moon, Sun, Save, Bell, Camera, Check, ShieldCheck, Sparkles, Target, RotateCcw, Award } from 'lucide-react';
+import { User, Lock, Moon, Sun, Save, Bell, Camera, Check, ShieldCheck, Sparkles, Target, RotateCcw, Award, ChevronDown } from 'lucide-react';
 import { UserProfile, NotificationSettings, PinSettings } from '../types';
 
 interface ProfileSettingsViewProps {
@@ -29,6 +29,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [age, setAge] = useState(userProfile?.age || '');
   const [avatar, setAvatar] = useState<string>(userProfile?.avatar || '🥕');
   const [challenges, setChallenges] = useState<string[]>(userProfile?.primaryChallenges || []);
+  // Header starts collapsed to just its small label — tapping the chevron
+  // slides it open to show the full heading/description.
+  const [isHeaderOpen, setIsHeaderOpen] = useState(false);
 
   // PIN settings state
   const [pinEnabled, setPinEnabled] = useState(pinSettings.enabled);
@@ -146,38 +149,54 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           <span>{toastMessage}</span>
         </div>
       )}
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold text-xs uppercase tracking-wider mb-1">
-            <User className="w-4 h-4" />
-            <span>پروفایل و تنظیمات هویج</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white">
-            مدیریت حساب کاربری و تنظیمات برنامه
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            اطلاعات شما کاملاً محلی و آفلاین روی دستگاهتان باقی می‌ماند.
-          </p>
+      {/* Header — collapsed to just the small label by default; tap the
+          chevron to reveal the full title + description. */}
+      <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6">
+          <button
+            onClick={() => setIsHeaderOpen((o) => !o)}
+            className="flex-1 w-full md:w-auto flex items-center justify-between gap-3 text-right"
+          >
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold text-xs uppercase tracking-wider">
+              <User className="w-4 h-4 shrink-0" />
+              <span>پروفایل و تنظیمات هویج</span>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-300 ${
+                isHeaderOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {/* Theme Quick Switcher */}
+          <button
+            onClick={onToggleTheme}
+            className="py-3 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold rounded-2xl flex items-center gap-2 shadow-xs transition-all text-xs border border-slate-200 dark:border-slate-700 shrink-0"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>حالت روز</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-slate-600" />
+                <span>حالت شب</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Theme Quick Switcher */}
-        <button
-          onClick={onToggleTheme}
-          className="py-3 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold rounded-2xl flex items-center gap-2 shadow-xs transition-all text-xs border border-slate-200 dark:border-slate-700"
-        >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="w-4 h-4 text-amber-400" />
-              <span>حالت روز (Light Mode)</span>
-            </>
-          ) : (
-            <>
-              <Moon className="w-4 h-4 text-slate-600" />
-              <span>حالت شب (Dark Mode)</span>
-            </>
-          )}
-        </button>
+        {isHeaderOpen && (
+          <div className="px-6 pb-6 -mt-1">
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white">
+              مدیریت حساب کاربری و تنظیمات برنامه
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              اطلاعات شما کاملاً محلی و آفلاین روی دستگاهتان باقی می‌ماند.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -443,7 +462,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
               <Lock className="w-5 h-5 text-orange-500" />
-              <span>قفل رمز عبور (PIN) هنگام ورود</span>
+              <span>قفل رمز عبور هنگام ورود</span>
             </h3>
 
             <form onSubmit={handlePinSubmit} className="space-y-4">
