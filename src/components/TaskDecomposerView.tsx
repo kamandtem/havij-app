@@ -9,6 +9,7 @@ interface TaskDecomposerViewProps {
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onAddSubtaskToTask: (taskId: string, title: string) => void;
+  celebratingTaskId?: string | null;
 }
 
 export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
@@ -16,7 +17,8 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
   onAddTask,
   onToggleSubtask,
   onDeleteTask,
-  onAddSubtaskToTask
+  onAddSubtaskToTask,
+  celebratingTaskId
 }) => {
   const [taskTitle, setTaskTitle] = useState('');
   const [subtaskInputs, setSubtaskInputs] = useState<string[]>(['', '']);
@@ -159,8 +161,21 @@ export const TaskDecomposerView: React.FC<TaskDecomposerViewProps> = ({
             return (
               <div
                 key={task.id}
-                className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs space-y-5"
+                className="relative bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs space-y-5 overflow-hidden"
               >
+                {celebratingTaskId === task.id && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-emerald-50/95 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="text-center px-6">
+                      <span className="text-4xl">🎉</span>
+                      <p className="text-sm font-black text-emerald-800 mt-2">
+                        آفرین! این کار رو کامل کردی
+                      </p>
+                      <p className="text-xs font-bold text-emerald-600 mt-0.5">
+                        یک قدم بزرگ برداشتی 🌱
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div className="flex items-center gap-4">
                     {/* SVG Progress Ring */}

@@ -28,7 +28,8 @@ const STORAGE_KEYS = {
   PIN_SETTINGS: 'havij_pin_settings',
   THEME: 'havij_theme',
   JOURNAL_NOTES: 'havij_journal_notes',
-  GARDEN_GUIDE_SEEN: 'havij_garden_guide_seen'
+  GARDEN_GUIDE_SEEN: 'havij_garden_guide_seen',
+  STORY_READ: 'havij_story_read'
 };
 
 // Formats a Date using LOCAL (device) date components, not UTC.
@@ -46,6 +47,16 @@ function formatLocalDate(d: Date): string {
 
 export function getTodayDateString(): string {
   return formatLocalDate(new Date());
+}
+
+// Renders a stored "YYYY-MM-DD" (Gregorian, local) date string as a short
+// Persian/Jalali (Shamsi) label — e.g. "۶ مرداد" — matching how a Persian
+// user reads dates on their device, instead of raw Gregorian digits.
+export function formatDateShamsiShort(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  const dateObj = new Date(y, m - 1, d);
+  return dateObj.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' });
 }
 
 // Effective Goal Date: Resets at 02:00 AM (02:00 Midnight/Early morning)
@@ -389,6 +400,38 @@ export function addPointsOnly(earnedPoints: number): GamificationData {
   return updated;
 }
 
+// Awards points and coins, growing the tree, but WITHOUT touching any tool's
+// badge-progress counter. Used where an activity should still earn its
+// reward every time (e.g. finishing one step of a decomposed task) but the
+// matching badge has a stricter condition than "used N times" — e.g.
+// "غول‌کش کارهای بزرگ" only counts a task once it's fully decomposed AND
+// fully completed, not once per step or once per task created.
+export function addPointsAndCoinsOnly(earnedPoints: number, earnedCoins: number): GamificationData {
+  const current = getStoredGamification();
+  const updated = growTreeAndAddPoints(current, earnedPoints, earnedCoins);
+  saveGamification(updated);
+  return updated;
+}
+
+// Advances a badge's tool-usage counter by one (and unlocks it at the
+// threshold) without awarding any points or coins — for badges whose
+// trigger is a distinct event from the points-earning actions themselves.
+export function incrementToolBadgeProgress(tool: keyof ToolUsageCounts): GamificationData {
+  const current = getStoredGamification();
+  const newToolUsage: ToolUsageCounts = {
+    ...current.toolUsage,
+    [tool]: current.toolUsage[tool] + 1
+  };
+  const badgeId = Object.keys(BADGE_TOOL_MAP).find((id) => BADGE_TOOL_MAP[id] === tool);
+  let unlockedBadges = current.unlockedBadges;
+  if (badgeId && newToolUsage[tool] >= BADGE_USES_REQUIRED && !unlockedBadges.includes(badgeId)) {
+    unlockedBadges = [...unlockedBadges, badgeId];
+  }
+  const updated: GamificationData = { ...current, toolUsage: newToolUsage, unlockedBadges };
+  saveGamification(updated);
+  return updated;
+}
+
 export function resetGamification(): GamificationData {
   const initialData = defaultGamification();
   saveGamification(initialData);
@@ -414,6 +457,31 @@ export function getGardenGuideSeen(): boolean {
 
 export function setGardenGuideSeen(): void {
   localStorage.setItem(STORAGE_KEYS.GARDEN_GUIDE_SEEN, 'true');
+}
+
+// Deterministically picks an index in [0, length) from today's date, so the
+// same day always yields the same pick (across re-renders and re-opens) and
+// the next day naturally rolls to a new one. Used for anything that should
+// rotate "once a day" — e.g. the story-bubble article.
+export function seededIndexForToday(length: number): number {
+  if (length <= 0) return 0;
+  const dateStr = getTodayDateString(); // YYYY-MM-DD
+  let seed = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    seed = (seed * 31 + dateStr.charCodeAt(i)) % 100000;
+  }
+  return seed % length;
+}
+
+// Whether today's story-bubble article has already been opened — drives the
+// Instagram-style "unread" ring around the bubble: present until read,
+// gone once it has been, and back again the next day with a new article.
+export function isTodayStoryRead(): boolean {
+  return localStorage.getItem(STORAGE_KEYS.STORY_READ) === getTodayDateString();
+}
+
+export function markTodayStoryRead(): void {
+  localStorage.setItem(STORAGE_KEYS.STORY_READ, getTodayDateString());
 }
 
 // Notifications

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAccordionHint } from '../utils/hint';
 import { BarChart3, Plus, Trash2, Zap, Target, Smile, ChevronDown } from 'lucide-react';
 import { DailyLog } from '../types';
-import { getTodayDateString } from '../utils/storage';
+import { getTodayDateString, formatDateShamsiShort } from '../utils/storage';
 
 interface DailyLogViewProps {
   dailyLogs: DailyLog[];
@@ -100,7 +100,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
         <div className="lg:col-span-5 bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs space-y-4">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <Plus className="w-5 h-5 text-orange-500" />
-            <span>ثبت ارزیابی امروز ({today})</span>
+            <span>ثبت ارزیابی امروز ({new Date().toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })})</span>
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -246,7 +246,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
                       ></div>
                     </div>
                     <span className="text-[10px] font-bold text-slate-500 truncate w-full text-center">
-                      {log.date.substring(5)}
+                      {formatDateShamsiShort(log.date)}
                     </span>
                   </div>
                 ))}
@@ -302,7 +302,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
                   ></div>
                 </div>
                 <span className="text-[10px] font-bold text-slate-500 truncate w-full text-center absolute -bottom-1">
-                  {d.date.substring(5)}
+                  {formatDateShamsiShort(d.date)}
                 </span>
               </div>
             ))}

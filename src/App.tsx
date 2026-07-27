@@ -58,6 +58,8 @@ import {
   saveSleepLog,
   getStoredGamification,
   recordToolUsage,
+  addPointsAndCoinsOnly,
+  incrementToolBadgeProgress,
   resetGamification,
   getStoredNotifications,
   saveNotifications,
@@ -82,6 +84,10 @@ export default function App() {
 
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>(getStoredDailyGoals());
   const [decomposedTasks, setDecomposedTasks] = useState<TaskDecomposed[]>(getStoredTaskDecomposed());
+  // Briefly highlights whichever task the user just fully completed, so the
+  // Task Decomposer panel can show a positive on-screen reaction alongside
+  // the completion sound.
+  const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
   const [focusLogs, setFocusLogs] = useState<FocusSessionLog[]>(getStoredFocusLogs());
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>(getStoredTimelineEvents());
   const [cbtEntries, setCbtEntries] = useState<CBTEntry[]>(getStoredCBTEntries());
@@ -334,35 +340,53 @@ export default function App() {
     const updated = [newTask, ...decomposedTasks];
     setDecomposedTasks(updated);
     saveTaskDecomposed(updated);
-    // Grows the tree, earns coins, and counts toward the "غول‌کش کارهای
-    // بزرگ" badge (3 uses) — the Task Decomposer is the only coin source.
-    const updatedGam = recordToolUsage('decomposer', 20, 5);
+    // Creating a decomposed task still grows the tree and earns coins (the
+    // Task Decomposer is the only coin source) — but the "غول‌کش کارهای
+    // بزرگ" badge only counts once this task is fully completed, not at
+    // creation, so it doesn't touch that counter here.
+    const updatedGam = addPointsAndCoinsOnly(20, 5);
     setGamification(updatedGam);
   };
 
   const handleToggleSubtask = (taskId: string, subtaskId: string) => {
+    let justCompletedTask = false;
     const updated = decomposedTasks.map((t) => {
       if (t.id === taskId) {
-        return {
-          ...t,
-          subtasks: t.subtasks.map((st) => {
-            if (st.id === subtaskId) {
-              const nextVal = !st.completed;
-              if (nextVal) {
-                // Also part of the Task Decomposer tool → same badge/coins.
-                const updatedGam = recordToolUsage('decomposer', 5, 2);
-                setGamification(updatedGam);
-              }
-              return { ...st, completed: nextVal };
+        const nextSubtasks = t.subtasks.map((st) => {
+          if (st.id === subtaskId) {
+            const nextVal = !st.completed;
+            if (nextVal) {
+              // Every step still grows the tree and earns coins — but not
+              // the completion badge; see below.
+              const updatedGam = addPointsAndCoinsOnly(5, 2);
+              setGamification(updatedGam);
             }
-            return st;
-          })
-        };
+            return { ...st, completed: nextVal };
+          }
+          return st;
+        });
+        // Did THIS toggle just finish the last remaining step?
+        if (nextSubtasks.length > 0 && nextSubtasks.every((st) => st.completed)) {
+          justCompletedTask = true;
+        }
+        return { ...t, subtasks: nextSubtasks };
       }
       return t;
     });
     setDecomposedTasks(updated);
     saveTaskDecomposed(updated);
+
+    if (justCompletedTask) {
+      // A positive, unmistakable reaction for finishing an entire
+      // decomposed task — sound plus a brief on-screen celebration — and
+      // ONLY here does the "غول‌کش کارهای بزرگ" badge progress, since it's
+      // meant for tasks that were both decomposed AND fully completed.
+      playCompletionChime();
+      setCelebratingTaskId(taskId);
+      window.setTimeout(() => setCelebratingTaskId((id) => (id === taskId ? null : id)), 2600);
+      const updatedGam = incrementToolBadgeProgress('decomposer');
+      setGamification(updatedGam);
+    }
   };
 
   const handleDeleteTaskDecomposed = (taskId: string) => {
@@ -637,6 +661,7 @@ export default function App() {
             onToggleSubtask={handleToggleSubtask}
             onDeleteTask={handleDeleteTaskDecomposed}
             onAddSubtaskToTask={handleAddSubtaskToTask}
+            celebratingTaskId={celebratingTaskId}
           />
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Target, Smile, Moon, Timer, PartyPopper } from 'lucide-react';
 import { DailyGoal, DailyLog, SleepLog } from '../types';
 import { getTodayDateString } from '../utils/storage';
@@ -31,8 +31,24 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   setActiveTab
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const today = getTodayDateString();
   const { showHint, markSeen } = useBellHint();
+
+  // Close on ANY tap outside the bell/panel — not just a second tap on the
+  // bell itself. A document-level listener works no matter what else on
+  // the page gets tapped (another button's own z-index/handler can't block
+  // it the way the old invisible backdrop sometimes did).
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [isOpen]);
 
   // Same logic as the Dashboard: completing all 3 golden goals always
   // means 100%, regardless of total points earned.
@@ -101,7 +117,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         onClick={() => {
           setIsOpen((v) => !v);

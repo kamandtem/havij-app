@@ -132,6 +132,8 @@ export interface JournalNote {
   id: string;
   title?: string;
   content: string;
+  color?: string; // palette key chosen by the user for this note
+  mood?: string; // a single emoji the user picked to tag the note's mood
   createdAt: string;
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Zap,
@@ -10,10 +10,12 @@ import {
   BookOpen,
   Settings,
   Camera,
-  Sun
+  Sun,
+  Coffee
 } from 'lucide-react';
 import { UserProfile, GamificationData } from '../types';
 import { SILVER_CARROT_LEVEL, GOLDEN_CARROT_LEVEL } from '../utils/storage';
+import { DonateModal } from './DonateModal';
 
 // Instagram and Telegram aren't part of lucide-react's icon set, so they're
 // drawn as small inline brand glyphs to keep this file dependency-free.
@@ -63,6 +65,19 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   // side visually slides it away, mimicking a real "close" gesture.
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
+
+  // Prevent the page behind the menu from scrolling while it's open — the
+  // drawer itself still scrolls internally (its own overflow-y-auto list),
+  // but the background shouldn't move with it.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -330,8 +345,21 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
         </div>
 
         {/* Social media footer */}
-        <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-          <div className="flex items-center justify-center gap-4">
+        <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="flex items-start justify-center gap-3">
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => setShowDonate(true)}
+                className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-500/20 flex items-center justify-center transition-colors"
+                title="حمایت از هویج"
+              >
+                <Coffee className="w-5 h-5" />
+              </button>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">دونیت</span>
+            </div>
+
+            <div className="w-px h-10 self-center border-r border-dashed border-slate-200 dark:border-slate-700 shrink-0" />
+
             <a
               href="https://www.instagram.com/havij.adhd"
               target="_blank"
@@ -351,11 +379,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               <TelegramGlyph className="w-5 h-5" />
             </a>
           </div>
-          <p className="text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
+          <p className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500">
             ما را در شبکه‌های اجتماعی دنبال کنید
           </p>
         </div>
       </div>
+
+      {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
     </div>
   );
 };

@@ -21,6 +21,7 @@ import { UserProfile, DailyGoal, GamificationData, Article } from '../types';
 import { playMicroChime } from '../utils/audio';
 import { ADHD_ARTICLES } from '../data/articles';
 import { ArticleStoryView } from './ArticleStoryView';
+import { seededIndexForToday, isTodayStoryRead, markTodayStoryRead } from '../utils/storage';
 
 interface DashboardViewProps {
   userProfile: UserProfile | null;
@@ -60,9 +61,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isHeaderOpen, setIsHeaderOpen] = useState(false);
   const [storyArticle, setStoryArticle] = useState<Article | null>(null);
 
-  const openRandomStory = () => {
-    const idx = Math.floor(Math.random() * ADHD_ARTICLES.length);
-    setStoryArticle(ADHD_ARTICLES[idx]);
+  // The story bubble shows the SAME article all day (seeded by today's
+  // date, like the quote-of-the-day banner) and rolls to a new one
+  // tomorrow — no more picking a random one on every tap.
+  const todaysArticle = ADHD_ARTICLES[seededIndexForToday(ADHD_ARTICLES.length)];
+  const [isStoryRead, setIsStoryRead] = useState(isTodayStoryRead);
+
+  const openTodaysStory = () => {
+    setStoryArticle(todaysArticle);
+    markTodayStoryRead();
+    setIsStoryRead(true);
   };
 
   // Play the same short chime used on the 5-minute-start button whenever
@@ -79,11 +87,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-white/80 backdrop-blur-md rounded-[28px] border border-slate-200/70 shadow-xs overflow-hidden">
         <div className="flex items-center justify-between gap-3 p-5 sm:p-6">
           <div className="flex items-center gap-3.5 min-w-0">
-            {/* Instagram-story-style circular bubble → random education article */}
+            {/* Instagram-story-style circular bubble → today's education
+                article; the colorful ring shows only until it's been read. */}
             <button
-              onClick={openRandomStory}
-              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full p-[3px] bg-gradient-to-tr from-orange-400 via-rose-500 to-amber-400 hover:scale-105 active:scale-95 transition-transform"
-              title="یک مقاله تصادفی آموزشی را ببین"
+              onClick={openTodaysStory}
+              className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full p-[3px] hover:scale-105 active:scale-95 transition-transform ${
+                isStoryRead
+                  ? 'bg-slate-200 dark:bg-slate-700'
+                  : 'bg-gradient-to-tr from-orange-400 via-rose-500 to-amber-400'
+              }`}
+              title={isStoryRead ? 'مقاله امروز رو خوندی' : 'مقاله آموزشی امروز رو ببین'}
             >
               <div className="w-full h-full rounded-full bg-white flex items-center justify-center border-2 border-white">
                 <BookOpen className="w-6 h-6 text-orange-500" />
@@ -141,21 +154,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          <div className="w-full max-w-xs flex flex-col gap-2.5">
+          <div className="w-full max-w-xs flex flex-row gap-2.5">
             <button
               onClick={handlePomodoroToggle}
-              className={`w-full py-3.5 px-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3.5 px-3 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-1.5 text-sm ${
                 focusIsRunning
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
                   : 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
               }`}
             >
-              <Play className="w-4 h-4 fill-current" />
-              <span>{focusIsRunning ? 'توقف موقت' : 'شروع سریع'}</span>
+              <Play className="w-4 h-4 fill-current shrink-0" />
+              <span className="truncate">{focusIsRunning ? 'توقف موقت' : 'شروع سریع'}</span>
             </button>
             <button
               onClick={() => setActiveTab('focus')}
-              className="w-full py-3.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 rounded-2xl font-bold transition-all"
+              className="flex-1 py-3.5 px-3 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 rounded-2xl font-bold transition-all text-sm truncate"
             >
               ورود به حالت تمرکز
             </button>

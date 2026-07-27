@@ -32,7 +32,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
           {/* Pill containing the 4 main sections. Inactive items show only
               their icon; the active one expands to show its icon + label,
               matching the reference navigation bar. */}
-          <div className="pointer-events-auto flex-1 flex items-center justify-between gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg rounded-full border border-slate-200/80 dark:border-slate-800 shadow-2xl px-2.5 py-2.5 min-w-0">
+          <div className="pointer-events-auto flex-1 flex items-center justify-between gap-0.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg rounded-full border border-slate-200/80 dark:border-slate-800 shadow-2xl px-1.5 py-2 min-w-0 overflow-hidden">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -40,15 +40,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 rounded-full transition-all shrink-0 ${
+                  className={`flex items-center gap-1.5 rounded-full transition-all min-w-0 ${
                     isActive
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white px-5 py-3.5'
-                      : 'text-slate-400 dark:text-slate-500 px-3.5 py-3.5'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white px-3.5 py-3'
+                      : 'text-slate-400 dark:text-slate-500 px-3 py-3'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
+                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
                   {isActive && (
-                    <span className="text-sm font-bold whitespace-nowrap">{item.label}</span>
+                    <span className="text-xs font-bold whitespace-nowrap truncate max-w-[84px]">{item.label}</span>
                   )}
                 </button>
               );
@@ -58,10 +58,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
           {/* Floating pen button, orange, opens the daily notes/journal screen */}
           <button
             onClick={() => setIsNotesOpen(true)}
-            className="pointer-events-auto shrink-0 w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white flex items-center justify-center shadow-xl shadow-orange-500/30 transition-all"
+            className="pointer-events-auto shrink-0 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white flex items-center justify-center shadow-xl shadow-orange-500/30 transition-all"
             title="یادداشت جدید"
           >
-            <PenLine className="w-7 h-7 stroke-[2.2]" />
+            <PenLine className="w-6 h-6 stroke-[2.2]" />
           </button>
         </div>
       </nav>
