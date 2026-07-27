@@ -42,9 +42,19 @@ type BadgeDef = {
 // merges into a golden tree — since a brand-new user has no way of guessing
 // any of that just from the numbers on screen.
 const GardenGuide: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
+  // Lock the page behind the modal so scrolling inside this dialog never
+  // leaks through and scrolls the Garden page underneath it.
+  React.useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-[32px] max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-[32px] max-w-lg w-full max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl border border-slate-200 dark:border-slate-800">
         <div className="p-6 pb-4 text-center bg-gradient-to-b from-emerald-50 to-transparent dark:from-emerald-950/30 rounded-t-[32px] relative">
           <button
             onClick={onDismiss}
@@ -196,9 +206,17 @@ const GardenBedModal: React.FC<{ gamification: GamificationData; onClose: () => 
 }) => {
   const slots = Array.from({ length: GARDEN_SIZE }, (_, i) => gamification.gardenTrees[i] || null);
 
+  React.useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-[32px] max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-[32px] max-w-lg w-full max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl border border-slate-200 dark:border-slate-800">
         <div className="p-6 pb-4 text-center bg-gradient-to-b from-emerald-50 to-transparent dark:from-emerald-950/30 rounded-t-[32px] relative">
           <button
             onClick={onClose}

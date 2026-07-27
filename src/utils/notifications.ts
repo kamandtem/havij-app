@@ -7,6 +7,7 @@ import { NotificationSettings } from '../types';
 const NOTIF_ID_GOALS = 1001;
 const NOTIF_ID_SLEEP = 1002;
 const NOTIF_ID_WAKE = 1003;
+const NOTIF_ID_DAILY_LOG = 1004;
 
 // Android requires notifications to belong to a channel that has sound and
 // vibration explicitly turned on — without this, reminders were arriving
@@ -62,7 +63,7 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
   // reminder off (or changing its time) doesn't leave stale schedules.
   try {
     await LocalNotifications.cancel({
-      notifications: [{ id: NOTIF_ID_GOALS }, { id: NOTIF_ID_SLEEP }, { id: NOTIF_ID_WAKE }]
+      notifications: [{ id: NOTIF_ID_GOALS }, { id: NOTIF_ID_SLEEP }, { id: NOTIF_ID_WAKE }, { id: NOTIF_ID_DAILY_LOG }]
     });
   } catch {
     // ignore cancel errors (e.g. nothing was scheduled yet)
@@ -102,6 +103,18 @@ export async function syncScheduledNotifications(settings: NotificationSettings)
       id: NOTIF_ID_WAKE,
       title: 'هویج 🥕',
       body: 'صبح بخیر! زمان بیداریته — یک لیوان آب بنوش و روز رو شروع کن.',
+      schedule: { on: { hour, minute }, allowWhileIdle: true },
+      channelId: REMINDER_CHANNEL_ID,
+      sound: settings.sound ? 'default' : undefined
+    });
+  }
+
+  if (settings.dailyLogReminderEnabled && settings.dailyLogReminderTime) {
+    const { hour, minute } = parseTime(settings.dailyLogReminderTime);
+    toSchedule.push({
+      id: NOTIF_ID_DAILY_LOG,
+      title: 'هویج 🥕',
+      body: 'یادت نره انرژی، تمرکز و خلق‌وخوی امروزت رو ثبت کنی تا نمودار روندت کامل بمونه.',
       schedule: { on: { hour, minute }, allowWhileIdle: true },
       channelId: REMINDER_CHANNEL_ID,
       sound: settings.sound ? 'default' : undefined

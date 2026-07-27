@@ -497,7 +497,9 @@ export function getStoredNotifications(): NotificationSettings {
       goalsReminderTime: '09:00',
       goalsReminderEnabled: true,
       wakeReminderTime: '07:30',
-      wakeReminderEnabled: false
+      wakeReminderEnabled: false,
+      dailyLogReminderTime: '20:30',
+      dailyLogReminderEnabled: false
     };
   }
   try {
@@ -511,7 +513,9 @@ export function getStoredNotifications(): NotificationSettings {
       goalsReminderTime: parsed.goalsReminderTime || '09:00',
       goalsReminderEnabled: parsed.goalsReminderEnabled ?? true,
       wakeReminderTime: parsed.wakeReminderTime || '07:30',
-      wakeReminderEnabled: parsed.wakeReminderEnabled ?? false
+      wakeReminderEnabled: parsed.wakeReminderEnabled ?? false,
+      dailyLogReminderTime: parsed.dailyLogReminderTime || '20:30',
+      dailyLogReminderEnabled: parsed.dailyLogReminderEnabled ?? false
     };
   } catch {
     return {
@@ -523,7 +527,9 @@ export function getStoredNotifications(): NotificationSettings {
       goalsReminderTime: '09:00',
       goalsReminderEnabled: true,
       wakeReminderTime: '07:30',
-      wakeReminderEnabled: false
+      wakeReminderEnabled: false,
+      dailyLogReminderTime: '20:30',
+      dailyLogReminderEnabled: false
     };
   }
 }

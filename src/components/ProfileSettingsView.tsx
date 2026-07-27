@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAccordionHint } from '../utils/hint';
-import { User, Lock, Moon, Sun, Save, Bell, Camera, Check, ShieldCheck, Sparkles, Target, RotateCcw, Award, ChevronDown } from 'lucide-react';
+import { User, Lock, Moon, Sun, Save, Bell, Camera, Check, ShieldCheck, Sparkles, Target, RotateCcw, Award, ChevronDown, BarChart3 } from 'lucide-react';
 import { UserProfile, NotificationSettings, PinSettings } from '../types';
 
 interface ProfileSettingsViewProps {
@@ -50,6 +50,8 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   // Wake-up reminder state (sleep tracker)
   const [wakeReminderEnabled, setWakeReminderEnabled] = useState(notificationSettings.wakeReminderEnabled ?? false);
   const [wakeReminderTime, setWakeReminderTime] = useState(notificationSettings.wakeReminderTime || '07:30');
+  const [dailyLogReminderEnabled, setDailyLogReminderEnabled] = useState(notificationSettings.dailyLogReminderEnabled ?? false);
+  const [dailyLogReminderTime, setDailyLogReminderTime] = useState(notificationSettings.dailyLogReminderTime || '20:30');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +133,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       goalsReminderEnabled,
       goalsReminderTime,
       wakeReminderEnabled,
-      wakeReminderTime
+      wakeReminderTime,
+      dailyLogReminderEnabled,
+      dailyLogReminderTime
     });
     showToast('تنظیمات یادآوری با موفقیت ذخیره شد.');
   };
@@ -446,6 +450,43 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                       value={wakeReminderTime}
                       onChange={(e) => setWakeReminderTime(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Daily Log (energy/focus/mood) Reminder */}
+              <div className="p-4 bg-emerald-50/50 dark:bg-slate-800/60 rounded-2xl border border-emerald-100 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      یادآوری ثبت روزانه (انرژی و تمرکز)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDailyLogReminderEnabled(!dailyLogReminderEnabled)}
+                    className={`w-11 h-6 rounded-full p-1 transition-colors ${
+                      dailyLogReminderEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      dailyLogReminderEnabled ? 'translate-x-0' : '-translate-x-5'
+                    }`} />
+                  </button>
+                </div>
+
+                {dailyLogReminderEnabled && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      ساعت یادآوری ثبت انرژی، تمرکز و خلق‌وخو
+                    </label>
+                    <input
+                      type="time"
+                      value={dailyLogReminderTime}
+                      onChange={(e) => setDailyLogReminderTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 )}

@@ -126,6 +126,8 @@ export interface NotificationSettings {
   goalsReminderEnabled?: boolean;
   wakeReminderTime?: string;
   wakeReminderEnabled?: boolean;
+  dailyLogReminderTime?: string;
+  dailyLogReminderEnabled?: boolean;
 }
 
 export interface JournalNote {

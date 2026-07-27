@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAccordionHint } from '../utils/hint';
-import { BarChart3, Plus, Trash2, Zap, Target, Smile, ChevronDown } from 'lucide-react';
+import { BarChart3, Plus, Trash2, Zap, Target, Smile, ChevronDown, Bell } from 'lucide-react';
 import { DailyLog } from '../types';
 import { getTodayDateString, formatDateShamsiShort } from '../utils/storage';
 
@@ -14,6 +14,7 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
   onSaveDailyLog
 }) => {
   const today = getTodayDateString();
+  const hasLoggedToday = dailyLogs.some((l) => l.date === today);
   const [energyRating, setEnergyRating] = useState(3);
   const [focusRating, setFocusRating] = useState(3);
   const [moodRating, setMoodRating] = useState(3);
@@ -43,26 +44,81 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
   // after every single entry (not gated behind a minimum count).
   const recentLogs = [...dailyLogs].slice(0, 30).reverse();
 
-  // Second chart: day-over-day CHANGE in mood, not the raw value — shows
-  // whether the user is improving, declining, or steady compared to the
-  // previous day they logged, plus an overall trend across the period.
-  const moodDeltas = recentLogs.slice(1).map((log, idx) => ({
-    date: log.date,
-    delta: log.moodRating - recentLogs[idx].moodRating
-  }));
+  // Changes chart: hidden by default, revealed via the button below the
+  // first trend chart. Shows energy + mood as a real broken-line chart,
+  // aggregated either weekly or monthly (not per-day), so the user can see
+  // the bigger-picture direction rather than daily noise.
+  const [showChangeChart, setShowChangeChart] = useState(false);
+  const [changePeriod, setChangePeriod] = useState<'weekly' | 'monthly'>('weekly');
 
-  const half = Math.floor(recentLogs.length / 2);
-  const earlierHalf = recentLogs.slice(0, half);
-  const recentHalf = recentLogs.slice(recentLogs.length - half);
-  const avgMood = (logs: typeof recentLogs) =>
-    logs.length ? logs.reduce((sum, l) => sum + l.moodRating, 0) / logs.length : 0;
-  const overallTrend = recentLogs.length >= 2 ? avgMood(recentHalf) - avgMood(earlierHalf) : 0;
+  const allLogsChrono = [...dailyLogs].reverse(); // oldest -> newest
+
+  const groupKey = (dateStr: string, period: 'weekly' | 'monthly'): string => {
+    if (period === 'monthly') return dateStr.substring(0, 7); // "YYYY-MM"
+    const d = new Date(dateStr);
+    const daysSinceEpoch = Math.floor(d.getTime() / (1000 * 60 * 60 * 24));
+    const weekIndex = Math.floor(daysSinceEpoch / 7);
+    return `w${weekIndex}`;
+  };
+
+  const buildAggregatedSeries = (period: 'weekly' | 'monthly') => {
+    const groups = new Map<string, { energySum: number; moodSum: number; count: number; lastDate: string }>();
+    for (const log of allLogsChrono) {
+      const key = groupKey(log.date, period);
+      const g = groups.get(key) || { energySum: 0, moodSum: 0, count: 0, lastDate: log.date };
+      g.energySum += log.energyRating;
+      g.moodSum += log.moodRating;
+      g.count += 1;
+      g.lastDate = log.date;
+      groups.set(key, g);
+    }
+    const points = Array.from(groups.entries()).map(([key, g]) => ({
+      key,
+      avgEnergy: g.energySum / g.count,
+      avgMood: g.moodSum / g.count,
+      lastDate: g.lastDate
+    }));
+    // Groups.entries() preserves insertion order, and we inserted chronologically.
+    return points.slice(-8); // last 8 weeks/months, to keep the chart legible
+  };
+
+  const changeSeries = buildAggregatedSeries(changePeriod);
+
+  const formatGroupLabel = (point: { key: string; lastDate: string }) => {
+    if (changePeriod === 'monthly') {
+      return new Date(point.lastDate).toLocaleDateString('fa-IR', { month: 'short' });
+    }
+    return formatDateShamsiShort(point.lastDate);
+  };
+
+  // Builds an SVG polyline path (as "x1,y1 x2,y2 ...") for a 0..5 rated
+  // series, mapped into the given chart height.
+  const buildPolylinePoints = (values: number[], width: number, height: number, padding: number) => {
+    if (values.length === 0) return '';
+    const usableWidth = width - padding * 2;
+    const step = values.length > 1 ? usableWidth / (values.length - 1) : 0;
+    return values
+      .map((v, i) => {
+        const x = padding + step * i;
+        const y = height - padding - ((v - 1) / 4) * (height - padding * 2); // rating 1..5 mapped to chart
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  };
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
       {savedMsg && (
         <div className="p-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg text-xs">
           ثبت روزانه با موفقیت ذخیره شد! ✨
+        </div>
+      )}
+      {!hasLoggedToday && !savedMsg && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+          <Bell className="w-4 h-4 text-amber-500 shrink-0 animate-bell-hint" />
+          <span className="text-xs font-bold text-amber-800">
+            یادآوری: هنوز انرژی، تمرکز و خلق‌وخوی امروزت رو ثبت نکردی — همین پایین ثبتش کن.
+          </span>
         </div>
       )}
       {/* Header — collapsed to just the small label by default; tap the
@@ -251,62 +307,115 @@ export const DailyLogView: React.FC<DailyLogViewProps> = ({
                   </div>
                 ))}
               </div>
+
+              {/* Toggle button for the weekly/monthly changes chart */}
+              <button
+                onClick={() => setShowChangeChart((v) => !v)}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-2"
+              >
+                <span>{showChangeChart ? 'بستن نمودار تغییرات' : 'نمودار تغییرات'}</span>
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Second Chart: Change Over Time (not raw values — the delta) */}
-      {recentLogs.length >= 2 && (
+      {/* Changes Chart: weekly/monthly line (broken-line) chart for energy + mood */}
+      {showChangeChart && (
         <div className="bg-white rounded-[28px] border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-800">تغییرات خلق‌وخو نسبت به روز قبل</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              این نمودار نشون میده هر روز نسبت به روز قبلش بهتر شدی، بدتر شدی، یا ثابت موندی — نه فقط عدد خام هر روز.
-            </p>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-800">نمودار تغییرات انرژی و خلق‌وخو</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                میانگین هر {changePeriod === 'weekly' ? 'هفته' : 'ماه'} را نشان می‌دهد تا روند کلی، نه نوسان روزانه، دیده شود.
+              </p>
+            </div>
+            <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => setChangePeriod('weekly')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  changePeriod === 'weekly' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500'
+                }`}
+              >
+                هفتگی
+              </button>
+              <button
+                onClick={() => setChangePeriod('monthly')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  changePeriod === 'monthly' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500'
+                }`}
+              >
+                ماهانه
+              </button>
+            </div>
           </div>
 
-          <div
-            className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
-              overallTrend > 0.15
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                : overallTrend < -0.15
-                ? 'bg-rose-50 border-rose-200 text-rose-700'
-                : 'bg-slate-50 border-slate-200 text-slate-600'
-            }`}
-          >
-            {overallTrend > 0.15 ? (
-              <span>📈 در این بازه، خلق‌وخوت نسبت به روزهای اول بهتر شده (به‌طور میانگین {overallTrend.toFixed(1)}+ از ۵)</span>
-            ) : overallTrend < -0.15 ? (
-              <span>📉 در این بازه، خلق‌وخوت نسبت به روزهای اول کمی افت داشته ({overallTrend.toFixed(1)} از ۵)</span>
-            ) : (
-              <span>➖ در این بازه، خلق‌وخوت تقریباً ثابت بوده، بدون تغییر محسوس</span>
-            )}
+          <div className="flex gap-4 text-xs font-bold">
+            <span className="flex items-center gap-1 text-amber-600">
+              <span className="w-3 h-3 rounded-full bg-amber-500"></span> انرژی
+            </span>
+            <span className="flex items-center gap-1 text-emerald-600">
+              <span className="w-3 h-3 rounded-full bg-emerald-500"></span> خلق‌وخو
+            </span>
           </div>
 
-          <div className="h-40 bg-slate-50 rounded-2xl p-4 flex items-end justify-around gap-2 border border-slate-100">
-            {moodDeltas.map((d) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1 h-full justify-center relative">
-                <div className="w-full flex justify-center h-full relative">
-                  {/* Zero baseline in the middle of the bar area */}
-                  <div className="absolute left-0 right-0 top-1/2 border-t border-slate-200"></div>
-                  <div
-                    className={`w-2.5 rounded-md transition-all absolute ${
-                      d.delta > 0 ? 'bg-emerald-500' : d.delta < 0 ? 'bg-rose-400' : 'bg-slate-300'
-                    }`}
-                    style={{
-                      height: `${Math.min(50, Math.abs(d.delta) * 25)}%`,
-                      top: d.delta >= 0 ? `${50 - Math.min(50, Math.abs(d.delta) * 25)}%` : '50%'
-                    }}
-                    title={`تغییر: ${d.delta > 0 ? '+' : ''}${d.delta}`}
-                  ></div>
-                </div>
-                <span className="text-[10px] font-bold text-slate-500 truncate w-full text-center absolute -bottom-1">
-                  {formatDateShamsiShort(d.date)}
-                </span>
+          {changeSeries.length < 2 ? (
+            <div className="h-56 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-2">
+              <BarChart3 className="w-10 h-10 text-slate-300" />
+              <p className="text-xs font-bold text-slate-600">
+                برای رسم نمودار {changePeriod === 'weekly' ? 'هفتگی' : 'ماهانه'} حداقل باید دو {changePeriod === 'weekly' ? 'هفته' : 'ماه'} داده ثبت شده باشد
+              </p>
+              <p className="text-[11px]">با ادامه‌ی ثبت روزانه، این نمودار خودش کامل می‌شود.</p>
+            </div>
+          ) : (
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <svg viewBox="0 0 400 220" className="w-full h-56">
+                {/* Baseline grid (ratings 1..5) */}
+                {[1, 2, 3, 4, 5].map((r) => {
+                  const y = 200 - ((r - 1) / 4) * 180;
+                  return (
+                    <line key={r} x1="20" y1={y} x2="380" y2={y} stroke="#e2e8f0" strokeWidth="1" />
+                  );
+                })}
+                <polyline
+                  points={buildPolylinePoints(changeSeries.map((p) => p.avgEnergy), 400, 200, 20)}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <polyline
+                  points={buildPolylinePoints(changeSeries.map((p) => p.avgMood), 400, 200, 20)}
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {changeSeries.map((p, i) => {
+                  const usableWidth = 400 - 40;
+                  const step = changeSeries.length > 1 ? usableWidth / (changeSeries.length - 1) : 0;
+                  const x = 20 + step * i;
+                  const yEnergy = 200 - ((p.avgEnergy - 1) / 4) * 180;
+                  const yMood = 200 - ((p.avgMood - 1) / 4) * 180;
+                  return (
+                    <React.Fragment key={p.key}>
+                      <circle cx={x} cy={yEnergy} r="3.5" fill="#f59e0b" />
+                      <circle cx={x} cy={yMood} r="3.5" fill="#10b981" />
+                    </React.Fragment>
+                  );
+                })}
+              </svg>
+              <div className="flex justify-around mt-1">
+                {changeSeries.map((p) => (
+                  <span key={p.key} className="text-[10px] font-bold text-slate-500 flex-1 text-center truncate">
+                    {formatGroupLabel(p)}
+                  </span>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

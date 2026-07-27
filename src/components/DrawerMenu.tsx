@@ -344,10 +344,42 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           </div>
         </div>
 
-        {/* Social media footer */}
-        <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-          <div className="flex items-start justify-center gap-3">
-            <div className="flex flex-col items-center gap-1">
+        {/* Social media footer — two aligned groups: (Instagram + Telegram)
+            with the "follow us" caption directly under that pair, and
+            Donate as its own group with its own caption underneath. */}
+        <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start justify-center gap-4">
+            {/* Group 1: Instagram + Telegram, shared caption below the pair */}
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://www.instagram.com/havij.adhd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+                  title="اینستاگرام هویج"
+                >
+                  <InstagramGlyph className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://t.me/havij_adhd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+                  title="تلگرام هویج"
+                >
+                  <TelegramGlyph className="w-5 h-5" />
+                </a>
+              </div>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                ما را در شبکه‌های اجتماعی دنبال کنید
+              </span>
+            </div>
+
+            <div className="w-px h-10 self-center border-r border-dashed border-slate-200 dark:border-slate-700 shrink-0" />
+
+            {/* Group 2: Donate, aligned the same way (icon row, caption below) */}
+            <div className="flex flex-col items-center gap-1.5">
               <button
                 onClick={() => setShowDonate(true)}
                 className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-500/20 flex items-center justify-center transition-colors"
@@ -357,31 +389,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               </button>
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">دونیت</span>
             </div>
-
-            <div className="w-px h-10 self-center border-r border-dashed border-slate-200 dark:border-slate-700 shrink-0" />
-
-            <a
-              href="https://www.instagram.com/havij.adhd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
-              title="اینستاگرام هویج"
-            >
-              <InstagramGlyph className="w-5 h-5" />
-            </a>
-            <a
-              href="https://t.me/havij_adhd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
-              title="تلگرام هویج"
-            >
-              <TelegramGlyph className="w-5 h-5" />
-            </a>
           </div>
-          <p className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500">
-            ما را در شبکه‌های اجتماعی دنبال کنید
-          </p>
         </div>
       </div>
 
