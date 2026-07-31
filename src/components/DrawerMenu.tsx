@@ -10,12 +10,10 @@ import {
   BookOpen,
   Settings,
   Camera,
-  Sun,
-  Coffee
+  Sun
 } from 'lucide-react';
 import { UserProfile, GamificationData } from '../types';
 import { SILVER_CARROT_LEVEL, GOLDEN_CARROT_LEVEL } from '../utils/storage';
-import { DonateModal } from './DonateModal';
 
 // Instagram and Telegram aren't part of lucide-react's icon set, so they're
 // drawn as small inline brand glyphs to keep this file dependency-free.
@@ -65,7 +63,6 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   // side visually slides it away, mimicking a real "close" gesture.
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [showDonate, setShowDonate] = useState(false);
 
   // Prevent the page behind the menu from scrolling while it's open — the
   // drawer itself still scrolls internally (its own overflow-y-auto list),
@@ -344,12 +341,10 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           </div>
         </div>
 
-        {/* Social media footer — two aligned groups: (Instagram + Telegram)
-            with the "follow us" caption directly under that pair, and
-            Donate as its own group with its own caption underneath. */}
+        {/* Social media footer — Instagram + Telegram with the
+            "follow us" caption directly under the pair. */}
         <div className="shrink-0 px-4 py-4 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-start justify-center gap-4">
-            {/* Group 1: Instagram + Telegram, shared caption below the pair */}
             <div className="flex flex-col items-center gap-1.5">
               <div className="flex items-center gap-2">
                 <a
@@ -375,25 +370,9 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 ما را در شبکه‌های اجتماعی دنبال کنید
               </span>
             </div>
-
-            <div className="w-px h-10 self-center border-r border-dashed border-slate-200 dark:border-slate-700 shrink-0" />
-
-            {/* Group 2: Donate, aligned the same way (icon row, caption below) */}
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                onClick={() => setShowDonate(true)}
-                className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-500/20 flex items-center justify-center transition-colors"
-                title="حمایت از هویج"
-              >
-                <Coffee className="w-5 h-5" />
-              </button>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">دونیت</span>
-            </div>
           </div>
         </div>
       </div>
-
-      {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
     </div>
   );
 };

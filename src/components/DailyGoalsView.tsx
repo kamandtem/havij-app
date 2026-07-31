@@ -19,7 +19,7 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
-  const [approxTimeMinutes, setApproxTimeMinutes] = useState(25);
+  const [approxTimeStr, setApproxTimeStr] = useState('25');
   const [importance, setImportance] = useState<'high' | 'medium' | 'low'>('medium');
   const [praiseMessage, setPraiseMessage] = useState<string | null>(null);
 
@@ -50,13 +50,17 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
       setTimeout(() => setErrorMessage(null), 4000);
       return;
     }
+    const parsedTime = parseInt(approxTimeStr, 10);
+    const clampedTime = Number.isFinite(parsedTime)
+      ? Math.min(180, Math.max(5, parsedTime))
+      : 15;
     onAddGoal({
       title: title.trim(),
-      approxTimeMinutes: Number(approxTimeMinutes) || 15,
+      approxTimeMinutes: clampedTime,
       importance
     });
     setTitle('');
-    setApproxTimeMinutes(25);
+    setApproxTimeStr('25');
     setImportance('medium');
     setShowModal(false);
     setErrorMessage(null);
@@ -379,11 +383,27 @@ export const DailyGoalsView: React.FC<DailyGoalsViewProps> = ({
                   زمان تقریبی مورد نیاز (دقیقه)
                 </label>
                 <input
-                  type="number"
-                  min="5"
-                  max="180"
-                  value={approxTimeMinutes}
-                  onChange={(e) => setApproxTimeMinutes(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={approxTimeStr}
+                  onChange={(e) => {
+                    // Allow the field to be freely typed into and fully
+                    // cleared — only digits are kept, and clamping happens
+                    // on blur/submit rather than on every keystroke, since
+                    // forcing a number (and re-rendering with it) on each
+                    // change is what made this field feel "stuck" and
+                    // uneditable on some Android devices.
+                    const digitsOnly = e.target.value.replace(/[^0-9]/g, '');
+                    setApproxTimeStr(digitsOnly);
+                  }}
+                  onBlur={() => {
+                    const parsed = parseInt(approxTimeStr, 10);
+                    const clamped = Number.isFinite(parsed)
+                      ? Math.min(180, Math.max(5, parsed))
+                      : 25;
+                    setApproxTimeStr(String(clamped));
+                  }}
                   className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
                 />
               </div>
